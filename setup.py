@@ -31,7 +31,7 @@ setup(
                 ' known as reader/writer) locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
-    url='https://github.com/yahoo/Zake',
+    url='https://github.com/harlowja/SharedLock',
     license="ASL 2.0",
     install_requires=[
         'oslo.utils',
