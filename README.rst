@@ -1,6 +1,9 @@
 SharedLock
 ==========
 
+.. image:: https://travis-ci.org/harlowja/SharedLock.png?branch=master
+   :target: https://travis-ci.org/harlowja/SharedLock
+
 A python package that provides shareable/exclusive (also known
 as reader/writer) locks.
 
