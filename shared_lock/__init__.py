@@ -29,7 +29,6 @@ eventlet = importutils.try_import('eventlet')
 eventlet_patcher = importutils.try_import('eventlet.patcher')
 
 
-
 def read_locked(*args, **kwargs):
     """Acquires & releases a read lock around call into decorated method.
 
