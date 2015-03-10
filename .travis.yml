@@ -6,7 +6,7 @@ python:
 # command to install dependencies
 install:
   - "pip install ."
-  - "pip install nose"
+  - "pip install -r test-requirements.txt"
 # command to run tests
 script: nosetests
 
