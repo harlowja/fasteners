@@ -20,7 +20,7 @@
 
 from __future__ import absolute_import
 
-from shared_lock.lock import read_locked
-from shared_lock.lock import write_locked
+from shared_lock.lock import read_locked  # noqa
+from shared_lock.lock import write_locked  # noqa
 
-from shared_lock.lock import ReaderWriterLock
+from shared_lock.lock import ReaderWriterLock  # noqa
