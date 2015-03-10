@@ -18,7 +18,9 @@
 
 # promote helpers to this module namespace
 
-from lock import read_locked
-from lock import write_locked
+from __future__ import absolute_import
 
-from lock import ReaderWriterLock
+from shared_lock.lock import read_locked
+from shared_lock.lock import write_locked
+
+from shared_lock.lock import ReaderWriterLock
