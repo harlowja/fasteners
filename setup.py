@@ -24,6 +24,12 @@ from setuptools import setup
 with open("README.rst", "r") as readme:
     long_description = readme.read()
 
+install_requires = [
+    'oslo.utils>=1.4.0',
+    'six',
+]
+test_requires = install_requires + ['nose', 'testtools', 'futures']
+
 setup(
     name='shared_lock',
     version='0.1.0',
@@ -33,11 +39,9 @@ setup(
     author_email='harlowja@yahoo-inc.com',
     url='https://github.com/harlowja/SharedLock',
     license="ASL 2.0",
-    install_requires=[
-        'oslo.utils',
-        'six',
-        'testtools',
-    ],
+    install_requires=install_requires,
+    tests_require=test_requires,
+    test_suite="nose.collector",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Topic :: Utilities",
