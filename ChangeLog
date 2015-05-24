@@ -1,4 +1,7 @@
 0.4:
+  - Have the interprocess lock acquire take a blocking
+    keyword argument (defaulting to true) that can avoid
+    blocking trying to acquire the lock
 0.3:
   - Renamed from 'shared_lock' to 'fasteners'
 0.2.1
