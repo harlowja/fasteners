@@ -77,7 +77,7 @@ class _InterProcessLock(object):
     """
     Default increment we will use (up to max delay) after each attempt before
     next attempt to acquire the lock. For example if 3 attempts have been made
-    the calling thread will sleep (0.001 * 3) before the next attempt to
+    the calling thread will sleep (0.01 * 3) before the next attempt to
     acquire the lock (and repeat).
     """
 
