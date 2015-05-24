@@ -35,7 +35,7 @@ setup(
     description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
-    url='https://github.com/harlowja/SharedLock',
+    url='https://github.com/harlowja/fasteners',
     license="ASL 2.0",
     install_requires=install_requires,
     classifiers=[
