@@ -25,8 +25,8 @@ import tempfile
 import threading
 import time
 
-from shared_lock import process_lock as pl
-from shared_lock import test
+from fasteners import process_lock as pl
+from fasteners import test
 
 
 class BrokenLock(pl.InterProcessLock):

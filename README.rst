@@ -1,8 +1,8 @@
-SharedLock
-==========
+Fasteners
+=========
 
-.. image:: https://travis-ci.org/harlowja/SharedLock.png?branch=master
-   :target: https://travis-ci.org/harlowja/SharedLock
+.. image:: https://travis-ci.org/harlowja/fasteners.png?branch=master
+   :target: https://travis-ci.org/harlowja/fasteners
 
 A python package that provides useful locks.
 

@@ -20,10 +20,10 @@
 
 from __future__ import absolute_import
 
-from shared_lock.lock import read_locked  # noqa
-from shared_lock.lock import write_locked  # noqa
+from fasteners.lock import read_locked  # noqa
+from fasteners.lock import write_locked  # noqa
 
-from shared_lock.lock import ReaderWriterLock  # noqa
-from shared_lock.process_lock import InterProcessLock  # noqa
+from fasteners.lock import ReaderWriterLock  # noqa
+from fasteners.process_lock import InterProcessLock  # noqa
 
-from shared_lock.process_lock import interprocess_locked  # noqa
+from fasteners.process_lock import interprocess_locked  # noqa

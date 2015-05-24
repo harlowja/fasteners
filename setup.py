@@ -30,8 +30,8 @@ install_requires = [
 ]
 
 setup(
-    name='shared_lock',
-    version='0.2.1',
+    name='fasteners',
+    version='0.3.0',
     description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
@@ -50,7 +50,8 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.4",
     ],
-    keywords="locks thread threads interprocess",
+    keywords="locks thread threads interprocess"
+             " processes process fasteners",
     packages=find_packages(),
     long_description=long_description,
 )

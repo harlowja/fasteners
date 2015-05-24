@@ -27,8 +27,8 @@ except ImportError:
 from concurrent import futures
 from oslo_utils import timeutils
 
-import shared_lock
-from shared_lock import test
+import fasteners
+from fasteners import test
 
 
 # NOTE(harlowja): Sleep a little so now() can not be the same (which will
@@ -54,7 +54,7 @@ def _find_overlaps(times, start, end):
 
 def _spawn_variation(readers, writers, max_workers=None):
     start_stops = collections.deque()
-    lock = shared_lock.ReaderWriterLock()
+    lock = fasteners.ReaderWriterLock()
 
     def read_func(ident):
         with lock.read_lock():
@@ -107,7 +107,7 @@ class ReadWriteLockTest(test.TestCase):
     THREAD_COUNT = 20
 
     def test_no_double_writers(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         watch = timeutils.StopWatch(duration=5)
         watch.start()
         dups = collections.deque()
@@ -142,7 +142,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertEqual([], list(active))
 
     def test_no_concurrent_readers_writers(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         watch = timeutils.StopWatch(duration=5)
         watch.start()
         dups = collections.deque()
@@ -185,7 +185,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertEqual([], list(active))
 
     def test_writer_abort(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         self.assertFalse(lock.owner)
 
         def blow_up():
@@ -197,7 +197,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertFalse(lock.owner)
 
     def test_reader_abort(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         self.assertFalse(lock.owner)
 
         def blow_up():
@@ -209,7 +209,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertFalse(lock.owner)
 
     def test_double_reader_abort(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         activated = collections.deque()
 
         def double_bad_reader():
@@ -231,7 +231,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertEqual(10, len([a for a in activated if a == 'w']))
 
     def test_double_reader_writer(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         activated = collections.deque()
         active = threading.Event()
 
@@ -261,7 +261,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertEqual(['r', 'w'], list(activated))
 
     def test_reader_chaotic(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         activated = collections.deque()
 
         def chaotic_reader(blow_up):
@@ -288,7 +288,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertEqual(5, len(readers))
 
     def test_writer_chaotic(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         activated = collections.deque()
 
         def chaotic_writer(blow_up):
@@ -316,7 +316,7 @@ class ReadWriteLockTest(test.TestCase):
 
     def test_single_reader_writer(self):
         results = []
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         with lock.read_lock():
             self.assertTrue(lock.is_reader())
             self.assertEqual(0, len(results))
@@ -330,7 +330,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertFalse(lock.is_writer())
 
     def test_reader_to_writer(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
 
         def writer_func():
             with lock.write_lock():
@@ -344,7 +344,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertFalse(lock.is_writer())
 
     def test_writer_to_reader(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
 
         def reader_func():
             with lock.read_lock():
@@ -359,7 +359,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertFalse(lock.is_writer())
 
     def test_double_writer(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         with lock.write_lock():
             self.assertFalse(lock.is_reader())
             self.assertTrue(lock.is_writer())
@@ -371,7 +371,7 @@ class ReadWriteLockTest(test.TestCase):
         self.assertFalse(lock.is_writer())
 
     def test_double_reader(self):
-        lock = shared_lock.ReaderWriterLock()
+        lock = fasteners.ReaderWriterLock()
         with lock.read_lock():
             self.assertTrue(lock.is_reader())
             self.assertFalse(lock.is_writer())
