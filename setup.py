@@ -31,9 +31,8 @@ install_requires = [
 
 setup(
     name='shared_lock',
-    version='0.1.0',
-    description='A python package that provides shareable/exclusive (also'
-                ' known as reader/writer) locks.',
+    version='0.2.0',
+    description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
     url='https://github.com/harlowja/SharedLock',
@@ -51,7 +50,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.4",
     ],
-    keywords="locks thread threads",
+    keywords="locks thread threads interprocess",
     packages=find_packages(),
     long_description=long_description,
 )

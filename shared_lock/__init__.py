@@ -24,3 +24,6 @@ from shared_lock.lock import read_locked  # noqa
 from shared_lock.lock import write_locked  # noqa
 
 from shared_lock.lock import ReaderWriterLock  # noqa
+from shared_lock.process_lock import InterProcessLock  # noqa
+
+from shared_lock.process_lock import interprocess_locked  # noqa

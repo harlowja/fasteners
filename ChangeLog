@@ -1,4 +1,5 @@
 0.2:
+  - Add a interprocess lock
 0.1:
   - Add travis yaml file
   - Initial commit/import
