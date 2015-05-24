@@ -31,7 +31,7 @@ install_requires = [
 
 setup(
     name='shared_lock',
-    version='0.2.0',
+    version='0.3.0',
     description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
