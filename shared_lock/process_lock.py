@@ -119,7 +119,13 @@ class _InterProcessLock(object):
 
     @staticmethod
     def _backoff_multiplier_delay(attempts, delay, max_delay):
-        time.sleep(max(max_delay, attempts * delay))
+        maybe_delay = attempts * delay
+        if maybe_delay < max_delay:
+            actual_delay = maybe_delay
+        else:
+            actual_delay = max_delay
+        actual_delay = max(0.0, actual_delay)
+        time.sleep(actual_delay)
 
     def _fetch_delay_functor(self, delay, max_delay, watch):
         return functools.partial(self._backoff_multiplier_delay,

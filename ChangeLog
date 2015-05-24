@@ -1,4 +1,6 @@
 0.3:
+0.2.1
+  - Fix delay not working as expected
 0.2:
   - Add a interprocess lock
 0.1:
