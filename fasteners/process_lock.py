@@ -29,6 +29,10 @@ import six
 LOG = logging.getLogger(__name__)
 
 
+def _noop_delay(attempts):
+    return None
+
+
 def _ensure_tree(path):
     """Create a directory (and any ancestor directories required).
 
@@ -86,7 +90,7 @@ class _InterProcessLock(object):
         self.path = path
         self.acquired = False
 
-    def _do_acquire(self, delay_func):
+    def _do_acquire(self, delay_func, blocking):
         attempts_iter = itertools.count(1)
         while True:
             attempts = six.next(attempts_iter)
@@ -94,7 +98,10 @@ class _InterProcessLock(object):
                 self.trylock()
             except IOError as e:
                 if e.errno in (errno.EACCES, errno.EAGAIN):
-                    delay_func(attempts)
+                    if blocking:
+                        delay_func(attempts)
+                    else:
+                        return (False, attempts)
                 else:
                     raise threading.ThreadError("Unable to acquire lock on"
                                                 " `%(path)s` due to"
@@ -104,7 +111,7 @@ class _InterProcessLock(object):
                                                     'exception': e,
                                                 })
             else:
-                return attempts
+                return (True, attempts)
 
     def _do_open(self):
         basedir = os.path.dirname(self.path)
@@ -131,21 +138,29 @@ class _InterProcessLock(object):
         return functools.partial(self._backoff_multiplier_delay,
                                  delay=delay, max_delay=max_delay)
 
-    def acquire(self, delay=DELAY_INCREMENT, max_delay=MAX_DELAY):
+    def acquire(self, blocking=True,
+                delay=DELAY_INCREMENT, max_delay=MAX_DELAY):
         if delay < 0:
             raise ValueError("Delay must be greater than or equal to zero")
         if delay >= max_delay:
             max_delay = delay
         self._do_open()
         watch = timeutils.StopWatch()
-        delay_func = self._fetch_delay_functor(delay, max_delay, watch)
+        if blocking:
+            delay_func = self._fetch_delay_functor(delay, max_delay, watch)
+        else:
+            delay_func = _noop_delay
         with watch:
-            attempts = self._do_acquire(delay_func)
+            gotten, attempts = self._do_acquire(delay_func, blocking)
+        if not gotten:
+            self.acquired = False
+            return False
+        else:
             self.acquired = True
-        LOG.debug("Acquired file lock `%s` after waiting %0.3fs [%s"
-                  " attempts were required]", self.path, watch.elapsed(),
-                  attempts)
-        return self.acquired
+            LOG.debug("Acquired file lock `%s` after waiting %0.3fs [%s"
+                      " attempts were required]", self.path, watch.elapsed(),
+                      attempts)
+            return True
 
     def _do_close(self):
         if self.lockfile is not None:
