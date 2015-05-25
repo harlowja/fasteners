@@ -1,3 +1,4 @@
+0.5:
 0.4:
   - Have the interprocess lock acquire take a blocking
     keyword argument (defaulting to true) that can avoid
