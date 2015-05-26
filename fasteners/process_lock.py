@@ -90,7 +90,7 @@ class _InterProcessLock(object):
         self.path = path
         self.acquired = False
 
-    def _do_acquire(self, delay_func, blocking):
+    def _do_acquire(self, delay_func, blocking, watch):
         attempts_iter = itertools.count(1)
         while True:
             attempts = six.next(attempts_iter)
@@ -98,10 +98,10 @@ class _InterProcessLock(object):
                 self.trylock()
             except IOError as e:
                 if e.errno in (errno.EACCES, errno.EAGAIN):
-                    if blocking:
-                        delay_func(attempts)
-                    else:
+                    if not blocking or watch.expired():
                         return (False, attempts)
+                    else:
+                        delay_func(attempts)
                 else:
                     raise threading.ThreadError("Unable to acquire lock on"
                                                 " `%(path)s` due to"
@@ -139,19 +139,22 @@ class _InterProcessLock(object):
                                  delay=delay, max_delay=max_delay)
 
     def acquire(self, blocking=True,
-                delay=DELAY_INCREMENT, max_delay=MAX_DELAY):
+                delay=DELAY_INCREMENT, max_delay=MAX_DELAY,
+                timeout=None):
         if delay < 0:
             raise ValueError("Delay must be greater than or equal to zero")
+        if timeout is not None and timeout < 0:
+            raise ValueError("Timeout must be greater than or equal to zero")
         if delay >= max_delay:
             max_delay = delay
         self._do_open()
-        watch = timeutils.StopWatch()
+        watch = timeutils.StopWatch(duration=timeout)
         if blocking:
             delay_func = self._fetch_delay_functor(delay, max_delay, watch)
         else:
             delay_func = _noop_delay
         with watch:
-            gotten, attempts = self._do_acquire(delay_func, blocking)
+            gotten, attempts = self._do_acquire(delay_func, blocking, watch)
         if not gotten:
             self.acquired = False
             return False
