@@ -1,4 +1,8 @@
 0.5:
+  - Make it possible to provide a acquisition timeout
+    to the interprocess lock (which when acquisition
+    can not complete in the desired time will return
+    false.
 0.4:
   - Have the interprocess lock acquire take a blocking
     keyword argument (defaulting to true) that can avoid
