@@ -1,3 +1,7 @@
+0.6:
+  - Allow the sleep function to be provided (so that
+    various alternatives other than time.sleep can
+    be used), ie eventlet.sleep (or other).
 0.5:
   - Make it possible to provide a acquisition timeout
     to the interprocess lock (which when acquisition

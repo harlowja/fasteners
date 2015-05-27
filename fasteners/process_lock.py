@@ -85,10 +85,11 @@ class _InterProcessLock(object):
     acquire the lock (and repeat).
     """
 
-    def __init__(self, path):
+    def __init__(self, path, sleep_func=time.sleep):
         self.lockfile = None
         self.path = path
         self.acquired = False
+        self.sleep_func = sleep_func
 
     def _do_acquire(self, delay_func, blocking, watch):
         attempts_iter = itertools.count(1)
@@ -124,19 +125,14 @@ class _InterProcessLock(object):
         if self.lockfile is None or self.lockfile.closed:
             self.lockfile = open(self.path, 'a')
 
-    @staticmethod
-    def _backoff_multiplier_delay(attempts, delay, max_delay):
+    def _backoff_multiplier_delay(self, attempts, delay, max_delay):
         maybe_delay = attempts * delay
         if maybe_delay < max_delay:
             actual_delay = maybe_delay
         else:
             actual_delay = max_delay
         actual_delay = max(0.0, actual_delay)
-        time.sleep(actual_delay)
-
-    def _fetch_delay_functor(self, delay, max_delay, watch):
-        return functools.partial(self._backoff_multiplier_delay,
-                                 delay=delay, max_delay=max_delay)
+        self.sleep_func(actual_delay)
 
     def acquire(self, blocking=True,
                 delay=DELAY_INCREMENT, max_delay=MAX_DELAY,
@@ -150,7 +146,8 @@ class _InterProcessLock(object):
         self._do_open()
         watch = timeutils.StopWatch(duration=timeout)
         if blocking:
-            delay_func = self._fetch_delay_functor(delay, max_delay, watch)
+            delay_func = functools.partial(self._backoff_multiplier_delay,
+                                           delay=delay, max_delay=max_delay)
         else:
             delay_func = _noop_delay
         with watch:
