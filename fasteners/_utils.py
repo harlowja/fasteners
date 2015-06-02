@@ -36,7 +36,8 @@ class StopWatch(object):
             t = self.stopped_at
         else:
             t = now()
-        return t - self.started_at
+        e = t - self.started_at
+        return max(0.0, e)
 
     def __enter__(self):
         self.start()
