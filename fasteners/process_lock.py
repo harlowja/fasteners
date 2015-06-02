@@ -23,8 +23,9 @@ import os
 import threading
 import time
 
-from oslo_utils import timeutils
 import six
+
+from fasteners import _utils
 
 LOG = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class _InterProcessLock(object):
         if delay >= max_delay:
             max_delay = delay
         self._do_open()
-        watch = timeutils.StopWatch(duration=timeout)
+        watch = _utils.StopWatch(duration=timeout)
         if blocking:
             delay_func = functools.partial(self._backoff_multiplier_delay,
                                            delay=delay, max_delay=max_delay)
