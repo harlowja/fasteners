@@ -25,7 +25,6 @@ with open("README.rst", "r") as readme:
     long_description = readme.read()
 
 install_requires = [
-    'oslo.utils>=1.4.0',
     'six',
 ]
 

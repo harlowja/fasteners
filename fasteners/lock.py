@@ -21,12 +21,16 @@ import collections
 import contextlib
 import threading
 
-from oslo_utils import importutils
 import six
 
-# Used for the reader-writer lock get the right thread 'hack' (needed below).
-eventlet = importutils.try_import('eventlet')
-eventlet_patcher = importutils.try_import('eventlet.patcher')
+try:
+    # Used for the reader-writer lock get the right
+    # thread 'hack' (needed below).
+    import eventlet
+    from eventlet import patcher as eventlet_patcher
+except ImportError:
+    eventlet = None
+    eventlet_patcher = None
 
 
 def read_locked(*args, **kwargs):

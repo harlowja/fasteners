@@ -25,10 +25,11 @@ except ImportError:
     from time import time as now
 
 from concurrent import futures
-from oslo_utils import timeutils
 
 import fasteners
 from fasteners import test
+
+from fasteners import _utils
 
 
 # NOTE(harlowja): Sleep a little so now() can not be the same (which will
@@ -108,7 +109,7 @@ class ReadWriteLockTest(test.TestCase):
 
     def test_no_double_writers(self):
         lock = fasteners.ReaderWriterLock()
-        watch = timeutils.StopWatch(duration=5)
+        watch = _utils.StopWatch(duration=5)
         watch.start()
         dups = collections.deque()
         active = collections.deque()
@@ -143,7 +144,7 @@ class ReadWriteLockTest(test.TestCase):
 
     def test_no_concurrent_readers_writers(self):
         lock = fasteners.ReaderWriterLock()
-        watch = timeutils.StopWatch(duration=5)
+        watch = _utils.StopWatch(duration=5)
         watch.start()
         dups = collections.deque()
         active = collections.deque()
