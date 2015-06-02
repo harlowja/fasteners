@@ -1,3 +1,4 @@
+0.7:
 0.6:
   - Allow the sleep function to be provided (so that
     various alternatives other than time.sleep can
