@@ -28,8 +28,6 @@ import threading
 
 import six
 
-from fasteners import _utils
-
 try:
     # Used for the reader-writer lock get the right
     # thread 'hack' (needed below).
