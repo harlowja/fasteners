@@ -24,7 +24,12 @@ except ImportError:
 
 
 class LockStack(object):
-    """Simple lock stack to get and release many locks."""
+    """Simple lock stack to get and release many locks.
+
+    An instance of this should **not** be used by many threads at the
+    same time, as the stack that is maintained will be corrupted and
+    invalid if that is attempted.
+    """
 
     def __init__(self):
         self._stack = []
