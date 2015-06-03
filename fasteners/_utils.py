@@ -16,11 +16,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 
 try:
     from time import monotonic as now
 except ImportError:
     from time import time as now
+
+LOG = logging.getLogger(__name__)
 
 
 class LockStack(object):
@@ -43,13 +47,16 @@ class LockStack(object):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
+        am_left = len(self._stack)
+        tot_am = am_left
         while self._stack:
             lock = self._stack.pop()
             try:
                 lock.release()
             except Exception:
-                # Always suppress this exception...
-                pass
+                LOG.exception("Failed releasing lock %s from lock"
+                              " stack with %s locks", am_left, tot_am)
+            am_left -= 1
 
 
 class StopWatch(object):
