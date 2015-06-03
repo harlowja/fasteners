@@ -17,14 +17,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-try:
-    from contextlib import ExitStack  # noqa
-except ImportError:
-    from contextlib2 import ExitStack  # noqa
-
 import collections
 import contextlib
 import threading
+
+from fasteners import _utils
 
 import six
 
@@ -273,9 +270,9 @@ def locked(*args, **kwargs):
         def wrapper(self, *args, **kwargs):
             attr_value = getattr(self, attr_name)
             if isinstance(attr_value, (tuple, list)):
-                with ExitStack() as stack:
+                with _utils.LockStack() as stack:
                     for lock in attr_value:
-                        stack.enter_context(lock)
+                        stack.acquire_lock(lock)
                     return f(self, *args, **kwargs)
             else:
                 lock = attr_value

@@ -23,6 +23,30 @@ except ImportError:
     from time import time as now
 
 
+class LockStack(object):
+    """Simple lock stack to get and release many locks."""
+
+    def __init__(self):
+        self._stack = []
+
+    def acquire_lock(self, lock):
+        gotten = lock.acquire()
+        self._stack.append(lock)
+        return gotten
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        while self._stack:
+            lock = self._stack.pop()
+            try:
+                lock.release()
+            except Exception:
+                # Always suppress this exception...
+                pass
+
+
 class StopWatch(object):
     """A really basic stop watch."""
 

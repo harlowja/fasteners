@@ -32,6 +32,22 @@ class Locked(object):
         cb(self._lock.locked())
 
 
+class ManyLocks(object):
+    def __init__(self, amount):
+        self._lock = []
+        for _i in range(0, amount):
+            self._lock.append(threading.Lock())
+
+    @fasteners.locked
+    def i_am_locked(self, cb):
+        gotten = [lock.locked() for lock in self._lock]
+        cb(gotten)
+
+    def i_am_not_locked(self, cb):
+        gotten = [lock.locked() for lock in self._lock]
+        cb(gotten)
+
+
 class RWLocked(object):
     def __init__(self):
         self._lock = fasteners.ReaderWriterLock()
@@ -53,6 +69,11 @@ class DecoratorsTest(test.TestCase):
         obj = Locked()
         obj.i_am_locked(lambda is_locked: self.assertTrue(is_locked))
         obj.i_am_not_locked(lambda is_locked: self.assertFalse(is_locked))
+
+    def test_many_locked(self):
+        obj = ManyLocks(10)
+        obj.i_am_locked(lambda gotten: self.assertTrue(all(gotten)))
+        obj.i_am_not_locked(lambda gotten: self.assertEqual(0, sum(gotten)))
 
     def test_read_write_locked(self):
         reader = fasteners.ReaderWriterLock.READER
