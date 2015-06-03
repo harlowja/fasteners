@@ -17,11 +17,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+try:
+    from contextlib import ExitStack  # noqa
+except ImportError:
+    from contextlib2 import ExitStack  # noqa
+
 import collections
 import contextlib
 import threading
 
 import six
+
+from fasteners import _utils
 
 try:
     # Used for the reader-writer lock get the right
@@ -228,3 +235,63 @@ class ReaderWriterLock(object):
                 with self._cond:
                     self._writer = None
                     self._cond.notify_all()
+
+
+@contextlib.contextmanager
+def try_lock(lock):
+    """Attempts to acquire a lock, and auto releases if acquired (on exit)."""
+    # NOTE(harlowja): the keyword argument for 'blocking' does not work
+    # in py2.x and only is fixed in py3.x (this adjustment is documented
+    # and/or debated in http://bugs.python.org/issue10789); so we'll just
+    # stick to the format that works in both (oddly the keyword argument
+    # works in py2.x but only with reentrant locks).
+    was_locked = lock.acquire(False)
+    try:
+        yield was_locked
+    finally:
+        if was_locked:
+            lock.release()
+
+
+def locked(*args, **kwargs):
+    """A locking **method** decorator.
+
+    It will look for a provided attribute (typically a lock or a list
+    of locks) on the first argument of the function decorated (typically this
+    is the 'self' object) and before executing the decorated function it
+    activates the given lock or list of locks as a context manager,
+    automatically releasing that lock on exit.
+
+    NOTE(harlowja): if no attribute name is provided then by default the
+    attribute named '_lock' is looked for (this attribute is expected to be
+    the lock/list of locks object/s) in the instance object this decorator
+    is attached to.
+    """
+
+    def decorator(f):
+        attr_name = kwargs.get('lock', '_lock')
+
+        @six.wraps(f)
+        def wrapper(self, *args, **kwargs):
+            attr_value = getattr(self, attr_name)
+            if isinstance(attr_value, (tuple, list)):
+                with ExitStack() as stack:
+                    for lock in attr_value:
+                        stack.enter_context(lock)
+                    return f(self, *args, **kwargs)
+            else:
+                lock = attr_value
+                with lock:
+                    return f(self, *args, **kwargs)
+
+        return wrapper
+
+    # This is needed to handle when the decorator has args or the decorator
+    # doesn't have args, python is rather weird here...
+    if kwargs or not args:
+        return decorator
+    else:
+        if len(args) == 1:
+            return decorator(args[0])
+        else:
+            return decorator

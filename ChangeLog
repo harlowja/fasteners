@@ -1,4 +1,8 @@
 0.7:
+  - Add helpful `locked` decorator that can
+    lock a method using a found attribute (a lock
+    object or list of lock objects) in the
+    instance the method is attached to.
 0.6:
   - Allow the sleep function to be provided (so that
     various alternatives other than time.sleep can

@@ -26,6 +26,9 @@ with open("README.rst", "r") as readme:
 
 install_requires = [
     'six',
+    # Only needed for <= python 3.3, replace me with requirement
+    # markers in the future...
+    'contextlib2',
 ]
 
 setup(

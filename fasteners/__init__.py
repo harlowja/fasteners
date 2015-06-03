@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 
+from fasteners.lock import locked  # noqa
 from fasteners.lock import read_locked  # noqa
 from fasteners.lock import write_locked  # noqa
 
