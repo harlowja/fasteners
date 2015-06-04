@@ -1,3 +1,4 @@
+0.8:
 0.7:
   - Add helpful `locked` decorator that can
     lock a method using a found attribute (a lock
