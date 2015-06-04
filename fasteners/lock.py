@@ -271,8 +271,10 @@ def locked(*args, **kwargs):
             attr_value = getattr(self, attr_name)
             if isinstance(attr_value, (tuple, list)):
                 with _utils.LockStack() as stack:
-                    for lock in attr_value:
-                        stack.acquire_lock(lock)
+                    for i, lock in enumerate(attr_value):
+                        if not stack.acquire_lock(lock):
+                            raise threading.ThreadError("Unable to acquire"
+                                                        " lock %s" % (i + 1))
                     return f(self, *args, **kwargs)
             else:
                 lock = attr_value
