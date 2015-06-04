@@ -40,7 +40,8 @@ class LockStack(object):
 
     def acquire_lock(self, lock):
         gotten = lock.acquire()
-        self._stack.append(lock)
+        if gotten:
+            self._stack.append(lock)
         return gotten
 
     def __enter__(self):
