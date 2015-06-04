@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2014 Yahoo! Inc. All Rights Reserved.
-#
-# All Rights Reserved.
+#    Copyright (C) 2015 Yahoo! Inc. All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,16 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# promote helpers to this module namespace
+import threading
 
-from __future__ import absolute_import
+import fasteners
+from fasteners import test
 
-from fasteners.lock import locked  # noqa
-from fasteners.lock import read_locked  # noqa
-from fasteners.lock import try_lock  # noqa
-from fasteners.lock import write_locked  # noqa
 
-from fasteners.lock import ReaderWriterLock  # noqa
-from fasteners.process_lock import InterProcessLock  # noqa
-
-from fasteners.process_lock import interprocess_locked  # noqa
+class HelpersTest(test.TestCase):
+    def test_try_lock(self):
+        lock = threading.Lock()
+        with fasteners.try_lock(lock) as locked:
+            self.assertTrue(locked)
+            with fasteners.try_lock(lock) as locked:
+                self.assertFalse(locked)
