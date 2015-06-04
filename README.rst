@@ -11,6 +11,13 @@ A python `package`_ that provides useful locks.
 
 It includes the following.
 
+Locking decorator
+*****************
+
+* Helpful ``locked`` decorator (that acquires instance
+  objects lock(s) and acquires on method entry and
+  releases on method exit).
+
 Reader-writer locks
 *******************
 
@@ -25,5 +32,13 @@ Inter-process locks
   release on process exit, even if ``__release__`` or
   ``__exit__`` is never called).
 * Helpful ``interprocess_locked`` decorator.
+
+Generic helpers
+***************
+
+* A ``try_lock`` helper context manager that will attempt to
+  acquire a given lock and provide back whether the attempt
+  passed or failed (if it passes, then further code in the
+  context manager will be ran **with** the lock acquired).
 
 .. _package: https://pypi.python.org/pypi/fasteners
