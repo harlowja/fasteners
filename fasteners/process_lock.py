@@ -231,7 +231,7 @@ else:
 
 def interprocess_locked(path):
     """Acquires & releases a interprocess lock around call into
-       decorated method."""
+       decorated function."""
 
     lock = InterProcessLock(path)
 
