@@ -206,6 +206,7 @@ class _InterProcessLock(object):
 
 
 class _WindowsLock(_InterProcessLock):
+
     def trylock(self):
         msvcrt.locking(self.lockfile.fileno(), msvcrt.LK_NBLCK, 1)
 
@@ -214,6 +215,7 @@ class _WindowsLock(_InterProcessLock):
 
 
 class _FcntlLock(_InterProcessLock):
+
     def trylock(self):
         fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
@@ -223,9 +225,13 @@ class _FcntlLock(_InterProcessLock):
 
 if os.name == 'nt':
     import msvcrt
+
+    #: Interprocess lock implementation that works on your system.
     InterProcessLock = _WindowsLock
 else:
     import fcntl
+
+    #: Interprocess lock implementation that works on your system.
     InterProcessLock = _FcntlLock
 
 
