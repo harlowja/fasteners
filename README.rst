@@ -4,6 +4,10 @@ Fasteners
 .. image:: https://travis-ci.org/harlowja/fasteners.png?branch=master
    :target: https://travis-ci.org/harlowja/fasteners
 
+.. image:: https://readthedocs.org/projects/fasteners/badge/?version=latest
+:target: https://readthedocs.org/projects/fasteners/?badge=latest
+:alt: Documentation Status
+
 Overview
 --------
 
