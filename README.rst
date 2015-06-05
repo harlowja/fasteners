@@ -5,8 +5,8 @@ Fasteners
    :target: https://travis-ci.org/harlowja/fasteners
 
 .. image:: https://readthedocs.org/projects/fasteners/badge/?version=latest
-:target: https://readthedocs.org/projects/fasteners/?badge=latest
-:alt: Documentation Status
+   :target: https://readthedocs.org/projects/fasteners/?badge=latest
+   :alt: Documentation Status
 
 Overview
 --------
