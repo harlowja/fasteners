@@ -1,4 +1,8 @@
 0.8:
+  - Attempt to use the monotonic pypi module
+    if its installed for monotonically increasing
+    time on python versions where this is not
+    built-in.
 0.7:
   - Add helpful `locked` decorator that can
     lock a method using a found attribute (a lock
