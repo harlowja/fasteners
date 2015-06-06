@@ -57,8 +57,8 @@ class _InterProcessLock(object):
     """An interprocess locking implementation.
 
     This is a lock implementation which allows multiple locks, working around
-    issues like bugs.debian.org/cgi-bin/bugreport.cgi?bug=632857 and does
-    not require any cleanup. Since the lock is always held on a file
+    issues like http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=632857 and
+    does not require any cleanup. Since the lock is always held on a file
     descriptor rather than outside of the process, the lock gets dropped
     automatically if the process crashes, even if ``__exit__`` is not
     executed.
