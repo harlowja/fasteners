@@ -315,6 +315,15 @@ class ReadWriteLockTest(test.TestCase):
         self.assertEqual(5, len(writers))
         self.assertEqual(10, len(readers))
 
+    def test_writer_reader_writer(self):
+        lock = fasteners.ReaderWriterLock()
+        with lock.write_lock():
+            self.assertTrue(lock.is_writer())
+            with lock.read_lock():
+                self.assertTrue(lock.is_reader())
+                with lock.write_lock():
+                    self.assertTrue(lock.is_writer())
+
     def test_single_reader_writer(self):
         results = []
         lock = fasteners.ReaderWriterLock()

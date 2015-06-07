@@ -216,10 +216,11 @@ class ReaderWriterLock(object):
         a lock.
         """
         me = self._current_thread()
-        if self.is_reader():
+        i_am_writer = self.is_writer(check_pending=False)
+        if self.is_reader() and not i_am_writer:
             raise RuntimeError("Reader %s to writer privilege"
                                " escalation not allowed" % me)
-        if self.is_writer(check_pending=False):
+        if i_am_writer:
             # Already the writer; this allows for basic reentrancy.
             yield self
         else:
