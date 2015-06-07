@@ -40,7 +40,8 @@ def read_locked(*args, **kwargs):
 
     NOTE(harlowja): if no attribute name is provided then by default the
     attribute named '_lock' is looked for (this attribute is expected to be
-    the rw-lock object) in the instance object this decorator is attached to.
+    a :py:class:`.ReaderWriterLock`) in the instance object this decorator
+    is attached to.
     """
 
     def decorator(f):
@@ -70,7 +71,8 @@ def write_locked(*args, **kwargs):
 
     NOTE(harlowja): if no attribute name is provided then by default the
     attribute named '_lock' is looked for (this attribute is expected to be
-    the rw-lock object) in the instance object this decorator is attached to.
+    a :py:class:`.ReaderWriterLock` object) in the instance object this
+    decorator is attached to.
     """
 
     def decorator(f):
