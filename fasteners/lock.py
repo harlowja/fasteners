@@ -110,7 +110,11 @@ class ReaderWriterLock(object):
     This can be eventually removed if http://bugs.python.org/issue8800 ever
     gets accepted into the python standard threading library...
     """
+
+    #: Writer owner type/string constant.
     WRITER = 'w'
+
+    #: Reader owner type/string constant.
     READER = 'r'
 
     @staticmethod
