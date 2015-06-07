@@ -175,7 +175,7 @@ class ReaderWriterLock(object):
 
         Will wait until no active or pending writers.
 
-        Raises a RuntimeError if a pending writer tries to acquire
+        Raises a ``RuntimeError`` if a pending writer tries to acquire
         a read lock.
         """
         me = self._current_thread()
@@ -209,7 +209,8 @@ class ReaderWriterLock(object):
 
         Will wait until no active readers. Blocks readers after acquiring.
 
-        Raises a RuntimeError if an active reader attempts to acquire a lock.
+        Raises a ``RuntimeError`` if an active reader attempts to acquire
+        a lock.
         """
         me = self._current_thread()
         if self.is_reader():
