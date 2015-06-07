@@ -1,4 +1,7 @@
-0.9
+0.9:
+  - Allow providing a non-standard (eventlet or
+    other condition class) to the r/w lock for
+    cases where it is useful to do so.
 0.8:
   - Add fastener logo (from openclipart).
   - Ensure r/w writer -> reader -> writer

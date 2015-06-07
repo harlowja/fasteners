@@ -132,11 +132,12 @@ class ReaderWriterLock(object):
                 return eventlet.getcurrent
         return threading.current_thread
 
-    def __init__(self, find_eventlet=True):
+    def __init__(self, find_eventlet=True,
+                 condition_cls=threading.Condition):
         self._writer = None
         self._pending_writers = collections.deque()
         self._readers = collections.deque()
-        self._cond = threading.Condition()
+        self._cond = condition_cls()
         self._current_thread = self._fetch_current_thread_functor(
             find_eventlet=find_eventlet)
 
