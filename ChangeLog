@@ -1,4 +1,7 @@
 0.8:
+  - Add fastener logo (from openclipart).
+  - Ensure r/w writer -> reader -> writer
+    lock acquisition.
   - Attempt to use the monotonic pypi module
     if its installed for monotonically increasing
     time on python versions where this is not
