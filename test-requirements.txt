@@ -2,3 +2,4 @@ nose
 testtools
 futures
 sphinx
+sphinx-rtd-theme
