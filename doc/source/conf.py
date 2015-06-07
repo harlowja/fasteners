@@ -50,8 +50,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Fasteners'
-copyright = u'2015, Joshua Harlow'
-author = u'Joshua Harlow'
+copyright = u'2015, OpenStack Foundation, Yahoo!'
+author = u'Joshua Harlow, OpenStack Developers'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -59,6 +59,7 @@ author = u'Joshua Harlow'
 #
 # The short X.Y version.
 version = '0.8'
+
 # The full version, including alpha/beta/rc tags.
 release = '0.8'
 
