@@ -26,6 +26,7 @@ with open("README.rst", "r") as readme:
 
 install_requires = [
     'six',
+    'monotonic>=0.1',
 ]
 
 setup(

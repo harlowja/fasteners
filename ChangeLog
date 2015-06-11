@@ -2,6 +2,7 @@
   - Allow providing a non-standard (eventlet or
     other condition class) to the r/w lock for
     cases where it is useful to do so.
+  - Directly use monotonic.monotonic.
 0.8:
   - Add fastener logo (from openclipart).
   - Ensure r/w writer -> reader -> writer

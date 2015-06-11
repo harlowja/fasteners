@@ -17,20 +17,8 @@
 #    under the License.
 
 import logging
-import time
 
-# Use monotonic time in stopwatches if we can get at it...
-#
-# PEP @ https://www.python.org/dev/peps/pep-0418/
-try:
-    now = time.monotonic
-except AttributeError:
-    try:
-        # Try to use the pypi module if it's available (optionally...)
-        from monotonic import monotonic as now
-    except (AttributeError, ImportError):
-        # Ok fallback to the non-monotonic one...
-        now = time.time
+from monotonic import monotonic as now  # noqa
 
 
 LOG = logging.getLogger(__name__)
