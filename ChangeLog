@@ -1,5 +1,7 @@
 0.10:
   - Add LICENSE in generated source tarballs
+  - Add a version.py file that can be used to
+    extract the current version.
 0.9:
   - Allow providing a non-standard (eventlet or
     other condition class) to the r/w lock for
