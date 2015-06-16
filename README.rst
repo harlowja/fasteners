@@ -12,6 +12,10 @@ Fasteners
    :target: https://pypi.python.org/pypi/fasteners/
    :alt: Downloads
 
+.. image:: https://img.shields.io/pypi/v/fasteners.svg
+    :target: https://pypi.python.org/pypi/fasteners/
+    :alt: Latest Version
+
 Overview
 --------
 
