@@ -119,7 +119,8 @@ class _InterProcessLock(object):
         basedir = os.path.dirname(self.path)
         made_basedir = _ensure_tree(basedir)
         if made_basedir:
-            LOG.info('Created lock base path `%s`', basedir)
+            LOG.log(_utils.BLATHER,
+                    'Created lock base path `%s`', basedir)
         # Open in append mode so we don't overwrite any potential contents of
         # the target file. This eliminates the possibility of an attacker
         # creating a symlink to an important file in our lock path.
@@ -175,9 +176,10 @@ class _InterProcessLock(object):
             return False
         else:
             self.acquired = True
-            LOG.debug("Acquired file lock `%s` after waiting %0.3fs [%s"
-                      " attempts were required]", self.path, watch.elapsed(),
-                      attempts)
+            LOG.log(_utils.BLATHER,
+                    "Acquired file lock `%s` after waiting %0.3fs [%s"
+                    " attempts were required]", self.path, watch.elapsed(),
+                    attempts)
             return True
 
     def _do_close(self):
@@ -207,8 +209,9 @@ class _InterProcessLock(object):
                 LOG.exception("Could not close the file handle"
                               " opened on `%s`", self.path)
             else:
-                LOG.debug("Unlocked and closed file lock open on"
-                          " `%s`", self.path)
+                LOG.log(_utils.BLATHER,
+                        "Unlocked and closed file lock open on"
+                        " `%s`", self.path)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()

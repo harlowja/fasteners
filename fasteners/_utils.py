@@ -20,6 +20,8 @@ import logging
 
 from monotonic import monotonic as now  # noqa
 
+# log level for low-level debugging
+BLATHER = 5
 
 LOG = logging.getLogger(__name__)
 
