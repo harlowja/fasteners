@@ -1,8 +1,19 @@
+0.11:
+  - Directly use monotonic.monotonic.
+0.10:
+  - Add LICENSE in generated source tarballs
+  - Add a version.py file that can be used to
+    extract the current version.
 0.9:
   - Allow providing a non-standard (eventlet or
     other condition class) to the r/w lock for
     cases where it is useful to do so.
-  - Directly use monotonic.monotonic.
+  - Instead of having the r/w lock take a find
+    eventlet keyword argument, allow for it to
+    be provided a function that will be later
+    called to get the current thread. This allows
+    for the current *hack* to be easily removed
+    by users (if they so desire).
 0.8:
   - Add fastener logo (from openclipart).
   - Ensure r/w writer -> reader -> writer

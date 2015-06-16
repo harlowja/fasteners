@@ -8,6 +8,10 @@ Fasteners
    :target: https://readthedocs.org/projects/fasteners/?badge=latest
    :alt: Documentation Status
 
+.. image:: https://img.shields.io/pypi/dm/fasteners.svg
+   :target: https://pypi.python.org/pypi/fasteners/
+   :alt: Downloads
+
 Overview
 --------
 

@@ -138,6 +138,23 @@ class _InterProcessLock(object):
     def acquire(self, blocking=True,
                 delay=DELAY_INCREMENT, max_delay=MAX_DELAY,
                 timeout=None):
+        """Attempt to acquire the given lock.
+
+        :param blocking: whether to wait forever to try to acquire the lock
+        :type blocking: bool
+        :param delay: when blocking this is the delay time in seconds that
+                      will be added after each failed acquisition
+        :type delay: int/float
+        :param max_delay: the maximum delay to have (this limits the
+                          accumulated delay(s) added after each failed
+                          acquisition)
+        :type max_delay: int/float
+        :param timeout: an optional timeout (limits how long blocking
+                        will occur for)
+        :type timeout: int/float
+        :returns: whether or not the acquisition succeeded
+        :rtype: bool
+        """
         if delay < 0:
             raise ValueError("Delay must be greater than or equal to zero")
         if timeout is not None and timeout < 0:
@@ -173,6 +190,7 @@ class _InterProcessLock(object):
         return self
 
     def release(self):
+        """Release the previously acquired lock."""
         if not self.acquired:
             raise threading.ThreadError("Unable to release an unacquired"
                                         " lock")
@@ -196,6 +214,7 @@ class _InterProcessLock(object):
         self.release()
 
     def exists(self):
+        """Checks if the path that this lock exists at actually exists."""
         return os.path.exists(self.path)
 
     def trylock(self):
