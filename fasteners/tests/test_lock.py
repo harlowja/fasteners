@@ -19,11 +19,6 @@ import random
 import threading
 import time
 
-try:
-    from time import monotonic as now
-except ImportError:
-    from time import time as now
-
 from concurrent import futures
 
 import fasteners
@@ -62,17 +57,17 @@ def _spawn_variation(readers, writers, max_workers=None):
             # TODO(harlowja): sometime in the future use a monotonic clock here
             # to avoid problems that can be caused by ntpd resyncing the clock
             # while we are actively running.
-            enter_time = now()
+            enter_time = _utils.now()
             time.sleep(WORK_TIMES[ident % len(WORK_TIMES)])
-            exit_time = now()
+            exit_time = _utils.now()
             start_stops.append((lock.READER, enter_time, exit_time))
             time.sleep(NAPPY_TIME)
 
     def write_func(ident):
         with lock.write_lock():
-            enter_time = now()
+            enter_time = _utils.now()
             time.sleep(WORK_TIMES[ident % len(WORK_TIMES)])
-            exit_time = now()
+            exit_time = _utils.now()
             start_stops.append((lock.WRITER, enter_time, exit_time))
             time.sleep(NAPPY_TIME)
 
