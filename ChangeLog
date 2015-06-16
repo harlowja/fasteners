@@ -1,5 +1,7 @@
 0.11:
   - Directly use monotonic.monotonic.
+  - Use BLATHER level for previously
+    INFO/DEBUG statements.
 0.10:
   - Add LICENSE in generated source tarballs
   - Add a version.py file that can be used to
