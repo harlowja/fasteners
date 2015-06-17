@@ -69,7 +69,7 @@ class Retry(object):
 
     def __init__(self, delay, max_delay,
                  sleep_func=time.sleep):
-        self.delay = delay,
+        self.delay = delay
         self.attempts = 0
         self.max_delay = max_delay
         self.sleep_func = sleep_func
