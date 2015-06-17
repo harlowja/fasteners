@@ -17,6 +17,7 @@
 #    under the License.
 
 import logging
+import time
 
 from monotonic import monotonic as now  # noqa
 
@@ -57,6 +58,35 @@ class LockStack(object):
                 LOG.exception("Failed releasing lock %s from lock"
                               " stack with %s locks", am_left, tot_am)
             am_left -= 1
+
+
+class RetryAgain(Exception):
+    """Exception to signal to retry helper to try again."""
+
+
+class Retry(object):
+    """A little retry helper object."""
+
+    def __init__(self, delay, max_delay,
+                 sleep_func=time.sleep):
+        self.delay = delay,
+        self.attempts = 0
+        self.max_delay = max_delay
+        self.sleep_func = sleep_func
+
+    def __call__(self, fn, *args, **kwargs):
+        while True:
+            self.attempts += 1
+            try:
+                return fn(*args, **kwargs)
+            except RetryAgain:
+                maybe_delay = self.attempts * self.delay
+                if maybe_delay < self.max_delay:
+                    actual_delay = maybe_delay
+                else:
+                    actual_delay = self.max_delay
+                actual_delay = max(0.0, actual_delay)
+                self.sleep_func(actual_delay)
 
 
 class StopWatch(object):
