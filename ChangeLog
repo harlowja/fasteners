@@ -1,3 +1,7 @@
+0.12:
+  - Use a tiny retry util helper class
+    for performing process locking
+    retries.
 0.11:
   - Directly use monotonic.monotonic.
   - Use BLATHER level for previously
