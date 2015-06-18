@@ -146,7 +146,8 @@ class _InterProcessLock(object):
             max_delay = delay
         self._do_open()
         watch = _utils.StopWatch(duration=timeout)
-        r = _utils.Retry(delay, max_delay, sleep_func=self.sleep_func)
+        r = _utils.Retry(delay, max_delay,
+                         sleep_func=self.sleep_func, watch=watch)
         with watch:
             gotten = r(self._try_acquire, blocking, watch)
         if not gotten:

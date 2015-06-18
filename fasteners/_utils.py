@@ -68,11 +68,12 @@ class Retry(object):
     """A little retry helper object."""
 
     def __init__(self, delay, max_delay,
-                 sleep_func=time.sleep):
+                 sleep_func=time.sleep, watch=None):
         self.delay = delay
         self.attempts = 0
         self.max_delay = max_delay
         self.sleep_func = sleep_func
+        self.watch = watch
 
     def __call__(self, fn, *args, **kwargs):
         while True:
@@ -86,6 +87,10 @@ class Retry(object):
                 else:
                     actual_delay = self.max_delay
                 actual_delay = max(0.0, actual_delay)
+                if self.watch is not None:
+                    leftover = self.watch.leftover()
+                    if leftover is not None and leftover < actual_delay:
+                        actual_delay = leftover
                 self.sleep_func(actual_delay)
 
 
@@ -97,13 +102,17 @@ class StopWatch(object):
         self.started_at = None
         self.stopped_at = None
 
+    def leftover(self):
+        if self.duration is None:
+            return None
+        return max(0.0, self.duration - self.elapsed())
+
     def elapsed(self):
         if self.stopped_at is not None:
-            t = self.stopped_at
+            end_time = self.stopped_at
         else:
-            t = now()
-        e = t - self.started_at
-        return max(0.0, e)
+            end_time = now()
+        return max(0.0, end_time - self.started_at)
 
     def __enter__(self):
         self.start()
@@ -120,7 +129,4 @@ class StopWatch(object):
         if self.duration is None:
             return False
         else:
-            e = self.elapsed()
-            if e > self.duration:
-                return True
-            return False
+            return self.elapsed() > self.duration
