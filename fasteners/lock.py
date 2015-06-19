@@ -161,14 +161,11 @@ class ReaderWriterLock(object):
     @property
     def owner(self):
         """Returns whether the lock is locked by a writer or reader."""
-        with self._cond:
-            # Obtain the lock to ensure we get a accurate view of the actual
-            # owner that isn't likely to change when we are reading it...
-            if self._writer is not None:
-                return self.WRITER
-            if self._readers:
-                return self.READER
-            return None
+        if self._writer is not None:
+            return self.WRITER
+        if self._readers:
+            return self.READER
+        return None
 
     def is_reader(self):
         """Returns if the caller is one of the readers."""
