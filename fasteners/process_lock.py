@@ -41,6 +41,8 @@ def _ensure_tree(path):
                 raise
             else:
                 return False
+        elif e.errno == errno.EISDIR:
+            return False
         else:
             raise
     else:
