@@ -137,7 +137,7 @@ class ReaderWriterLock(object):
                  current_thread_functor=None):
         self._writer = None
         self._pending_writers = collections.deque()
-        self._readers = collections.deque()
+        self._readers = {}
         self._cond = condition_cls()
         if current_thread_functor is None:
             current_thread_functor = self._fetch_current_thread_functor()
@@ -191,7 +191,10 @@ class ReaderWriterLock(object):
                 # No active writer, or we are the writer;
                 # we are good to become a reader.
                 if self._writer is None or self._writer == me:
-                    self._readers.append(me)
+                    try:
+                        self._readers[me] = self._readers[me] + 1
+                    except KeyError:
+                        self._readers[me] = 1
                     break
                 # An active writer; guess we have to wait.
                 self._cond.wait()
@@ -203,7 +206,14 @@ class ReaderWriterLock(object):
             # still have to remove that other read lock; this allows for
             # basic reentrancy to be possible.
             with self._cond:
-                self._readers.remove(me)
+                try:
+                    me_instances = self._readers[me]
+                    if me_instances > 1:
+                        self._readers[me] = me_instances - 1
+                    else:
+                        self._readers.pop(me)
+                except KeyError:
+                    pass
                 self._cond.notify_all()
 
     @contextlib.contextmanager
