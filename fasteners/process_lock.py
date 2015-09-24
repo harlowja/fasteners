@@ -82,11 +82,12 @@ class _InterProcessLock(object):
     acquire the lock (and repeat).
     """
 
-    def __init__(self, path, sleep_func=time.sleep):
+    def __init__(self, path, sleep_func=time.sleep, logger=None):
         self.lockfile = None
         self.path = path
         self.acquired = False
         self.sleep_func = sleep_func
+        self.logger = _utils.pick_first_not_none(logger, LOG)
 
     def _try_acquire(self, blocking, watch):
         try:
@@ -112,8 +113,8 @@ class _InterProcessLock(object):
         basedir = os.path.dirname(self.path)
         made_basedir = _ensure_tree(basedir)
         if made_basedir:
-            LOG.log(_utils.BLATHER,
-                    'Created lock base path `%s`', basedir)
+            self.logger.log(_utils.BLATHER,
+                            'Created lock base path `%s`', basedir)
         # Open in append mode so we don't overwrite any potential contents of
         # the target file. This eliminates the possibility of an attacker
         # creating a symlink to an important file in our lock path.
@@ -157,10 +158,10 @@ class _InterProcessLock(object):
             return False
         else:
             self.acquired = True
-            LOG.log(_utils.BLATHER,
-                    "Acquired file lock `%s` after waiting %0.3fs [%s"
-                    " attempts were required]", self.path, watch.elapsed(),
-                    r.attempts)
+            self.logger.log(_utils.BLATHER,
+                            "Acquired file lock `%s` after waiting %0.3fs [%s"
+                            " attempts were required]", self.path,
+                            watch.elapsed(), r.attempts)
             return True
 
     def _do_close(self):
@@ -180,19 +181,19 @@ class _InterProcessLock(object):
         try:
             self.unlock()
         except IOError:
-            LOG.exception("Could not unlock the acquired lock opened"
-                          " on `%s`", self.path)
+            self.logger.exception("Could not unlock the acquired lock opened"
+                                  " on `%s`", self.path)
         else:
             self.acquired = False
             try:
                 self._do_close()
             except IOError:
-                LOG.exception("Could not close the file handle"
-                              " opened on `%s`", self.path)
+                self.logger.exception("Could not close the file handle"
+                                      " opened on `%s`", self.path)
             else:
-                LOG.log(_utils.BLATHER,
-                        "Unlocked and closed file lock open on"
-                        " `%s`", self.path)
+                self.logger.log(_utils.BLATHER,
+                                "Unlocked and closed file lock open on"
+                                " `%s`", self.path)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
