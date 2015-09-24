@@ -1,3 +1,6 @@
+0.14:
+  - Allow providing a custom exception logger
+    to 'locked' decorator
 0.13:
   - Fix 'ensure_tree' check on freebsd
 0.12:

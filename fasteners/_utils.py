@@ -27,6 +27,14 @@ BLATHER = 5
 LOG = logging.getLogger(__name__)
 
 
+def pick_first_not_none(*values):
+    """Returns first of values that is *not* None (or None if all are/were)."""
+    for val in values:
+        if val is not None:
+            return val
+    return None
+
+
 class LockStack(object):
     """Simple lock stack to get and release many locks.
 
@@ -35,8 +43,9 @@ class LockStack(object):
     invalid if that is attempted.
     """
 
-    def __init__(self):
+    def __init__(self, logger=None):
         self._stack = []
+        self._logger = pick_first_not_none(logger, LOG)
 
     def acquire_lock(self, lock):
         gotten = lock.acquire()
@@ -55,8 +64,8 @@ class LockStack(object):
             try:
                 lock.release()
             except Exception:
-                LOG.exception("Failed releasing lock %s from lock"
-                              " stack with %s locks", am_left, tot_am)
+                self._logger.exception("Failed releasing lock %s from lock"
+                                       " stack with %s locks", am_left, tot_am)
             am_left -= 1
 
 

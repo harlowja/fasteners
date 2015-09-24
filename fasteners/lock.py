@@ -280,16 +280,21 @@ def locked(*args, **kwargs):
     attribute named '_lock' is looked for (this attribute is expected to be
     the lock/list of locks object/s) in the instance object this decorator
     is attached to.
+
+    NOTE(harlowja): a custom logger (which will be used if lock release
+    failures happen) can be provided by passing a logger instance for keyword
+    argument ``logger``.
     """
 
     def decorator(f):
         attr_name = kwargs.get('lock', '_lock')
+        logger = kwargs.get('logger')
 
         @six.wraps(f)
         def wrapper(self, *args, **kwargs):
             attr_value = getattr(self, attr_name)
             if isinstance(attr_value, (tuple, list)):
-                with _utils.LockStack() as stack:
+                with _utils.LockStack(logger=logger) as stack:
                     for i, lock in enumerate(attr_value):
                         if not stack.acquire_lock(lock):
                             raise threading.ThreadError("Unable to acquire"
