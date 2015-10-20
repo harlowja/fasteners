@@ -31,6 +31,12 @@ from fasteners import test
 WIN32 = os.name == 'nt'
 
 
+def spin_lock(lock_file, passed, death, offset=None):
+    with pl.InterProcessLock(lock_file, offset=offset):
+        passed.set()
+        death.wait()
+
+
 class BrokenLock(pl.InterProcessLock):
     def __init__(self, name, errno_code):
         super(BrokenLock, self).__init__(name)
@@ -204,6 +210,38 @@ class ProcessLockTest(test.TestCase):
             self.assertTrue(os.path.exists(lock_file))
 
         foo()
+
+    def test_offset_lock_acquire(self):
+
+        def try_unlink(lock_file):
+            try:
+                os.unlink(lock_file)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+
+        lock_file = os.path.join(self.lock_dir, 'lock')
+        self.addCleanup(try_unlink, lock_file)
+
+        children = []
+        for i in range(0, 25):
+            death = multiprocessing.Event()
+            passed = multiprocessing.Event()
+            child = multiprocessing.Process(target=spin_lock,
+                                            args=[lock_file,
+                                                  passed, death],
+                                            kwargs={'offset': i})
+            child.start()
+            children.append((child, passed, death))
+
+        while children:
+            child, passed, death = children.pop()
+            try:
+                passed.wait()
+                death.set()
+                child.join()
+            finally:
+                del child, passed, death
 
     def test_bad_acquire(self):
         lock_file = os.path.join(self.lock_dir, 'lock')
