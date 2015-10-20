@@ -22,6 +22,7 @@ import threading
 import time
 
 import six
+from six.moves import range as compat_range  # noqa
 
 from fasteners import _utils
 
@@ -82,11 +83,24 @@ class _InterProcessLock(object):
     acquire the lock (and repeat).
     """
 
-    def __init__(self, path, sleep_func=time.sleep):
+    def __init__(self, path, sleep_func=time.sleep, offset=0):
+        if offset < 0:
+            raise ValueError("Offset must be greater than or equal to zero")
         self.lockfile = None
         self.path = path
         self.acquired = False
+        self.offset = offset
         self.sleep_func = sleep_func
+
+    @classmethod
+    def make_offset_locks(cls, path, amount, sleep_func=time.sleep):
+        """Create many locks that use the same path (and offsets in it)."""
+        if amount <= 0:
+            raise ValueError("At least one lock must be created")
+        locks = []
+        for i in compat_range(0, amount):
+            locks.append(cls(path, sleep_func=sleep_func, offset=i))
+        return locks
 
     def _try_acquire(self, blocking, watch):
         try:
@@ -119,6 +133,7 @@ class _InterProcessLock(object):
         # creating a symlink to an important file in our lock path.
         if self.lockfile is None or self.lockfile.closed:
             self.lockfile = open(self.path, 'a')
+            self.lockfile.seek(self.offset)
 
     def acquire(self, blocking=True,
                 delay=DELAY_INCREMENT, max_delay=MAX_DELAY,
@@ -222,10 +237,12 @@ class _FcntlLock(_InterProcessLock):
     """Interprocess lock implementation that works on posix systems."""
 
     def trylock(self):
-        fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB, 1,
+                    self.lockfile.tell(), os.SEEK_CUR)
 
     def unlock(self):
-        fcntl.lockf(self.lockfile, fcntl.LOCK_UN)
+        fcntl.lockf(self.lockfile, fcntl.LOCK_UN, 1,
+                    self.lockfile.tell(), os.SEEK_CUR)
 
 
 if os.name == 'nt':
