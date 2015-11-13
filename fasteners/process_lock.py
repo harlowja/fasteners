@@ -111,10 +111,11 @@ class _InterProcessLock(object):
 
     def _do_open(self):
         basedir = os.path.dirname(self.path)
-        made_basedir = _ensure_tree(basedir)
-        if made_basedir:
-            self.logger.log(_utils.BLATHER,
-                            'Created lock base path `%s`', basedir)
+        if basedir:
+            made_basedir = _ensure_tree(basedir)
+            if made_basedir:
+                self.logger.log(_utils.BLATHER,
+                                'Created lock base path `%s`', basedir)
         # Open in append mode so we don't overwrite any potential contents of
         # the target file. This eliminates the possibility of an attacker
         # creating a symlink to an important file in our lock path.
