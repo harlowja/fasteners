@@ -3,6 +3,7 @@
     to 'locked' decorator
   - Allow providing a custom logger to process
     lock class
+  - Fix issue #12
 0.13:
   - Fix 'ensure_tree' check on freebsd
 0.12:
