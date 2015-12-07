@@ -17,7 +17,24 @@
 #    under the License.
 
 import logging
+import sys
 import time
+
+try:
+    from os import fsencode as _fsencode
+except (ImportError, AttributeError):
+    def _fsencode(path):
+        # Replicate similar logic to what py3.2+ fsencode does.
+        # See: https://bugs.python.org/issue8514
+        encoding = sys.getfilesystemencoding()
+        if encoding == 'mbcs':
+            errors = 'strict'
+        else:
+            errors = 'surrogateescape'
+        return path.encode(encoding, errors)
+
+
+import six
 
 from monotonic import monotonic as now  # noqa
 
@@ -25,6 +42,19 @@ from monotonic import monotonic as now  # noqa
 BLATHER = 5
 
 LOG = logging.getLogger(__name__)
+
+
+def canonicalize_path(path):
+    """Canonicalizes a potential path.
+
+    Returns a binary string encoded into filesystem encoding.
+    """
+    if isinstance(path, six.binary_type):
+        return path
+    if isinstance(path, six.text_type):
+        return _fsencode(path)
+    else:
+        return canonicalize_path(str(path))
 
 
 def pick_first_not_none(*values):
