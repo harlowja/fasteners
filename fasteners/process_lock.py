@@ -66,6 +66,11 @@ class _InterProcessLock(object):
     safe to close the file descriptor while another thread holds the
     lock. Just opening and closing the lock file can break synchronization,
     so lock files must be accessed only using this abstraction.
+
+    .. warning::
+
+       It is quite useful to read before using (to understand
+       the risks involved): http://0pointer.de/blog/projects/locking.html
     """
 
     MAX_DELAY = 0.1
