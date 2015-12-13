@@ -84,7 +84,7 @@ class _InterProcessLock(object):
 
     def __init__(self, path, sleep_func=time.sleep, logger=None):
         self.lockfile = None
-        self.path = path
+        self.path = _utils.canonicalize_path(path)
         self.acquired = False
         self.sleep_func = sleep_func
         self.logger = _utils.pick_first_not_none(logger, LOG)
