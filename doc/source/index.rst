@@ -11,6 +11,8 @@ A python `package`_ that provides useful locks.
    api/lock
    api/process_lock
 
+   examples
+
 Indices and tables
 ==================
 
