@@ -9,6 +9,13 @@ Interprocess locks
 
   Launch multiple of these at the same time to see the lock(s) in action.
 
+.. warning::
+
+  There are no guarantees regarding usage by multiple threads in a
+  single process with these locks (you will have to ensure single process
+  safety yourself using traditional thread based locks). In other words this
+  lock works **only** between processes.
+
 .. code-block:: python
 
     import time
@@ -143,3 +150,21 @@ Multi-lock decorator
 
     o = NotThreadSafeThing()
     o.do_something()
+
+
+--------
+Try lock
+--------
+
+.. code-block:: python
+
+    import threading
+
+    import fasteners
+
+    t = threading.Lock()
+    with fasteners.try_lock(t) as gotten:
+        if gotten:
+            print("I got the lock")
+        else:
+            print("I did not get the lock")
