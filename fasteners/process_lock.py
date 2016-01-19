@@ -176,7 +176,12 @@ class _InterProcessLock(object):
             self.lockfile = None
 
     def __enter__(self):
-        self.acquire()
+        gotten = self.acquire()
+        if not gotten:
+            # This shouldn't happen, but just incase...
+            raise threading.ThreadError("Unable to acquire a file lock"
+                                        " on `%s` (when used as a"
+                                        " context manager)" % self.path)
         return self
 
     def release(self):
