@@ -250,6 +250,7 @@ class ProcessLockTest(test.TestCase):
 
             child_pipe.send(None)
 
+    @test.testtools.skipIf(WIN32, "Windows cannot open file handles twice")
     def test_non_destructive(self):
         lock_file = os.path.join(self.lock_dir, 'not-destroyed')
         with open(lock_file, 'w') as f:
