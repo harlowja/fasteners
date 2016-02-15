@@ -101,7 +101,6 @@ def lock_files(lock_path, handles_dir, num_handles=50):
                 count += 1
                 pl.InterProcessLock._unlock(handle)
             except IOError:
-                print(os.getpid())
                 os._exit(2)
             finally:
                 handle.close()
