@@ -27,6 +27,8 @@ import time
 from fasteners import process_lock as pl
 from fasteners import test
 
+WIN32 = os.name == 'nt'
+
 
 class BrokenLock(pl.InterProcessLock):
     def __init__(self, name, errno_code):
@@ -177,6 +179,7 @@ class ProcessLockTest(test.TestCase):
         lock = pl.InterProcessLock(lock_file)
         self.assertRaises(threading.ThreadError, lock.release)
 
+    @test.testtools.skipIf(WIN32, "This test assumes a POSIX environment")
     def test_interprocess_lock(self):
         lock_file = os.path.join(self.lock_dir, 'lock')
 
