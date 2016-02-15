@@ -44,6 +44,17 @@ class BrokenLock(pl.InterProcessLock):
         raise err
 
 
+def try_lock(lock_file):
+    try:
+        my_lock = pl.InterProcessLock(lock_file)
+        my_lock.lockfile = open(lock_file, 'w')
+        my_lock.trylock()
+        my_lock.unlock()
+        os._exit(1)
+    except IOError:
+        os._exit(0)
+
+
 class ProcessLockTest(test.TestCase):
     def setUp(self):
         super(ProcessLockTest, self).setUp()
@@ -60,20 +71,11 @@ class ProcessLockTest(test.TestCase):
         lock_file = os.path.join(self.lock_dir, 'lock')
         lock = pl.InterProcessLock(lock_file)
 
-        def try_lock():
-            try:
-                my_lock = pl.InterProcessLock(lock_file)
-                my_lock.lockfile = open(lock_file, 'w')
-                my_lock.trylock()
-                my_lock.unlock()
-                os._exit(1)
-            except IOError:
-                os._exit(0)
-
         def attempt_acquire(count):
             children = []
             for i in range(count):
-                child = multiprocessing.Process(target=try_lock)
+                child = multiprocessing.Process(
+                    target=try_lock, args=(lock_file,))
                 child.start()
                 children.append(child)
             exit_codes = []
