@@ -223,21 +223,23 @@ class _InterProcessLock(object):
 class _WindowsLock(_InterProcessLock):
     """Interprocess lock implementation that works on windows systems."""
 
-    def trylock(self):
-        msvcrt.locking(self.lockfile.fileno(), msvcrt.LK_NBLCK, 1)
+    def trylock(self, lockfile=None):
+        fileno = (lockfile or self.lockfile).fileno()
+        msvcrt.locking(fileno, msvcrt.LK_NBLCK, 1)
 
-    def unlock(self):
-        msvcrt.locking(self.lockfile.fileno(), msvcrt.LK_UNLCK, 1)
+    def unlock(self, lockfile=None):
+        fileno = (lockfile or self.lockfile).fileno()
+        msvcrt.locking(fileno, msvcrt.LK_UNLCK, 1)
 
 
 class _FcntlLock(_InterProcessLock):
     """Interprocess lock implementation that works on posix systems."""
 
-    def trylock(self):
-        fcntl.lockf(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    def trylock(self, lockfile=None):
+        fcntl.lockf(lockfile or self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-    def unlock(self):
-        fcntl.lockf(self.lockfile, fcntl.LOCK_UN)
+    def unlock(self, lockfile=None):
+        fcntl.lockf(lockfile or self.lockfile, fcntl.LOCK_UN)
 
 
 if os.name == 'nt':

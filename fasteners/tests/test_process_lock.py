@@ -16,7 +16,6 @@
 #    under the License.
 
 import errno
-import fcntl
 import multiprocessing
 import os
 import shutil
@@ -124,9 +123,9 @@ class ProcessLockTest(test.TestCase):
                 count = 0
                 for handle in handles:
                     try:
-                        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        pl.InterProcessLock.trylock(handle)
                         count += 1
-                        fcntl.flock(handle, fcntl.LOCK_UN)
+                        pl.InterProcessLock.unlock(handle)
                     except IOError:
                         os._exit(2)
                     finally:
