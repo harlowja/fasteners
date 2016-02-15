@@ -45,7 +45,7 @@ class BrokenLock(pl.InterProcessLock):
 
 
 @contextlib.contextmanager
-def scoped_child_processes(children, timeout=0.1):
+def scoped_child_processes(children, timeout=0.1, exitcode=0):
     for child in children:
         child.daemon = True
         child.start()
@@ -54,6 +54,11 @@ def scoped_child_processes(children, timeout=0.1):
     for child in children:
         child.join(max(timeout - (time.time() - start), 0))
         child.terminate()
+    if exitcode is not None:
+        for child in children:
+            c_code = child.exitcode
+            msg = "Child exitcode {} != {}"
+            assert c_code == exitcode, msg.format(c_code, exitcode)
 
 
 def try_lock(lock_file):
@@ -132,7 +137,7 @@ class ProcessLockTest(test.TestCase):
             children = [
                 multiprocessing.Process(target=try_lock, args=(lock_file,))
                 for i in range(count)]
-            with scoped_child_processes(children, timeout=10):
+            with scoped_child_processes(children, timeout=10, exitcode=None):
                 pass
             return sum(c.exitcode for c in children)
 
