@@ -214,32 +214,44 @@ class _InterProcessLock(object):
         return os.path.exists(self.path)
 
     def trylock(self):
-        raise NotImplementedError()
+        self._trylock(self.lockfile)
 
     def unlock(self):
+        self._unlock(self.lockfile)
+
+    @staticmethod
+    def _trylock():
+        raise NotImplementedError()
+
+    @staticmethod
+    def _unlock():
         raise NotImplementedError()
 
 
 class _WindowsLock(_InterProcessLock):
     """Interprocess lock implementation that works on windows systems."""
 
-    def trylock(self, lockfile=None):
-        fileno = (lockfile or self.lockfile).fileno()
+    @staticmethod
+    def _trylock(lockfile):
+        fileno = lockfile.fileno()
         msvcrt.locking(fileno, msvcrt.LK_NBLCK, 1)
 
-    def unlock(self, lockfile=None):
-        fileno = (lockfile or self.lockfile).fileno()
+    @staticmethod
+    def _unlock(lockfile):
+        fileno = lockfile.fileno()
         msvcrt.locking(fileno, msvcrt.LK_UNLCK, 1)
 
 
 class _FcntlLock(_InterProcessLock):
     """Interprocess lock implementation that works on posix systems."""
 
-    def trylock(self, lockfile=None):
-        fcntl.lockf(lockfile or self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    @staticmethod
+    def _trylock(lockfile):
+        fcntl.lockf(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-    def unlock(self, lockfile=None):
-        fcntl.lockf(lockfile or self.lockfile, fcntl.LOCK_UN)
+    @staticmethod
+    def _unlock(lockfile):
+        fcntl.lockf(lockfile, fcntl.LOCK_UN)
 
 
 if os.name == 'nt':
