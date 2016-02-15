@@ -15,11 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import errno
 import multiprocessing
 import os
 import shutil
-import signal
 import tempfile
 import threading
 import time
@@ -42,6 +42,18 @@ class BrokenLock(pl.InterProcessLock):
         err = IOError()
         err.errno = self.errno_code
         raise err
+
+
+@contextlib.contextmanager
+def scoped_child_processes(children, timeout=0.1):
+    for child in children:
+        child.daemon = True
+        child.start()
+    yield
+    start = time.time()
+    for child in children:
+        child.join(max(timeout - (time.time() - start), 0))
+        child.terminate()
 
 
 def try_lock(lock_file):
@@ -85,6 +97,21 @@ def lock_files(lock_path, handles_dir, num_handles=50):
             raise AssertionError("Unable to open all handles")
 
 
+def inter_processlock_helper(lockname, lock_filename, pipe):
+    lock2 = pl.InterProcessLock(lockname)
+    lock2.lockfile = open(lock_filename, 'w')
+    have_lock = False
+    while not have_lock:
+        try:
+            lock2.trylock()
+            have_lock = True
+        except IOError:
+            pass
+    # Hold the lock and wait for the parent
+    pipe.send(None)
+    pipe.recv()
+
+
 class ProcessLockTest(test.TestCase):
     def setUp(self):
         super(ProcessLockTest, self).setUp()
@@ -102,17 +129,12 @@ class ProcessLockTest(test.TestCase):
         lock = pl.InterProcessLock(lock_file)
 
         def attempt_acquire(count):
-            children = []
-            for i in range(count):
-                child = multiprocessing.Process(
-                    target=try_lock, args=(lock_file,))
-                child.start()
-                children.append(child)
-            exit_codes = []
-            for child in children:
-                child.join()
-                exit_codes.append(child.exitcode)
-            return sum(exit_codes)
+            children = [
+                multiprocessing.Process(target=try_lock, args=(lock_file,))
+                for i in range(count)]
+            with scoped_child_processes(children, timeout=10):
+                pass
+            return sum(c.exitcode for c in children)
 
         self.assertTrue(lock.acquire())
         try:
@@ -150,14 +172,8 @@ class ProcessLockTest(test.TestCase):
         children = [multiprocessing.Process(target=lock_files, args=args)
                     for _ in range(num_processes)]
 
-        # We do this in three loops in an attempt to get all processes up and
-        # running at the same time
-        for c in children:
-            # Just a precaution to avoid hung processes
-            c.daemon = True
-            c.start()
-        for c in children:
-            c.join(10)
+        with scoped_child_processes(children, timeout=10):
+            pass
         for c in children:
             self.assertEqual(0, c.exitcode)
 
@@ -187,19 +203,22 @@ class ProcessLockTest(test.TestCase):
         lock = pl.InterProcessLock(lock_file)
         self.assertRaises(threading.ThreadError, lock.release)
 
-    @test.testtools.skipIf(WIN32, "This test assumes a POSIX environment")
     def test_interprocess_lock(self):
         lock_file = os.path.join(self.lock_dir, 'lock')
+        lock_name = 'foo'
 
-        pid = os.fork()
-        if pid:
+        child_pipe, them = multiprocessing.Pipe()
+        child = multiprocessing.Process(
+            target=inter_processlock_helper, args=(lock_name, lock_file, them))
+
+        with scoped_child_processes((child,)):
+
             # Make sure the child grabs the lock first
+            if not child_pipe.poll(5):
+                self.fail('Timed out waiting for child to grab lock')
+
             start = time.time()
-            while not os.path.exists(lock_file):
-                if time.time() - start > 5:
-                    self.fail('Timed out waiting for child to grab lock')
-                time.sleep(0)
-            lock1 = pl.InterProcessLock('foo')
+            lock1 = pl.InterProcessLock(lock_name)
             lock1.lockfile = open(lock_file, 'w')
             # NOTE(bnemec): There is a brief window between when the lock file
             # is created and when it actually becomes locked.  If we happen to
@@ -216,25 +235,8 @@ class ProcessLockTest(test.TestCase):
                     break
             else:
                 self.fail('Never caught expected lock exception')
-            # We don't need to wait for the full sleep in the child here
-            os.kill(pid, signal.SIGKILL)
-        else:
-            try:
-                lock2 = pl.InterProcessLock('foo')
-                lock2.lockfile = open(lock_file, 'w')
-                have_lock = False
-                while not have_lock:
-                    try:
-                        lock2.trylock()
-                        have_lock = True
-                    except IOError:
-                        pass
-            finally:
-                # NOTE(bnemec): This is racy, but I don't want to add any
-                # synchronization primitives that might mask a problem
-                # with the one we're trying to test here.
-                time.sleep(.5)
-                os._exit(0)
+
+            child_pipe.send(None)
 
     def test_non_destructive(self):
         lock_file = os.path.join(self.lock_dir, 'not-destroyed')
