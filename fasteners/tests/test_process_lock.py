@@ -97,8 +97,6 @@ def lock_files(lock_path, handles_dir, num_handles=50):
         count = 0
         for handle in handles:
             try:
-                if count % 5:
-                    print(os.getpid(), count)
                 pl.InterProcessLock._trylock(handle)
                 count += 1
                 pl.InterProcessLock._unlock(handle)
@@ -188,7 +186,7 @@ class ProcessLockTest(test.TestCase):
         children = [multiprocessing.Process(target=lock_files, args=args)
                     for _ in range(num_processes)]
 
-        with scoped_child_processes(children, timeout=10, exitcode=0):
+        with scoped_child_processes(children, timeout=30, exitcode=0):
             pass
 
     def test_lock_externally(self):
