@@ -51,9 +51,18 @@ def scoped_child_processes(children, timeout=0.1, exitcode=0):
         child.start()
     yield
     start = time.time()
+    timed_out = 0
+
     for child in children:
         child.join(max(timeout - (time.time() - start), 0))
+        if child.is_alive():
+            timed_out += 1
         child.terminate()
+
+    if timed_out:
+        msg = "{} child processes killed due to timeout\n".format(timed_out)
+        sys.stderr.write(msg)
+
     if exitcode is not None:
         for child in children:
             c_code = child.exitcode
@@ -88,6 +97,8 @@ def lock_files(lock_path, handles_dir, num_handles=50):
         count = 0
         for handle in handles:
             try:
+                if count % 5:
+                    print(os.getpid(), count)
                 pl.InterProcessLock._trylock(handle)
                 count += 1
                 pl.InterProcessLock._unlock(handle)
@@ -177,10 +188,8 @@ class ProcessLockTest(test.TestCase):
         children = [multiprocessing.Process(target=lock_files, args=args)
                     for _ in range(num_processes)]
 
-        with scoped_child_processes(children, timeout=10):
+        with scoped_child_processes(children, timeout=10, exitcode=0):
             pass
-        for c in children:
-            self.assertEqual(0, c.exitcode)
 
     def test_lock_externally(self):
         self._do_test_lock_externally(self.lock_dir)
