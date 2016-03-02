@@ -4,6 +4,9 @@ Fasteners
 .. image:: https://travis-ci.org/harlowja/fasteners.png?branch=master
    :target: https://travis-ci.org/harlowja/fasteners
 
+.. image: https://ci.appveyor.com/api/projects/status/7d7aku32pimpadiv?svg=true
+   :target: https://ci.appveyor.com/project/JoshuaHarlow/fasteners
+
 .. image:: https://readthedocs.org/projects/fasteners/badge/?version=latest
    :target: https://readthedocs.org/projects/fasteners/?badge=latest
    :alt: Documentation Status
