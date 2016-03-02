@@ -17,6 +17,7 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "pip install --disable-pip-version-check --user --upgrade pip"
   - "%PYTHON%/Scripts/pip.exe install six"
+  - "%PYTHON%/Scripts/pip.exe install testtools"
   - "%PYTHON%/Scripts/pip.exe install monotonic"
   - "%PYTHON%/Scripts/pip.exe install nose"
   - "%PYTHON%/Scripts/pip.exe install coverage"
