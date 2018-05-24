@@ -222,6 +222,8 @@ class ReaderWriterLock(object):
 
         Will wait until no active readers. Blocks readers after acquiring.
 
+        Guaranteed for locks to be processed in fair order (FIFO).
+
         Raises a ``RuntimeError`` if an active reader attempts to acquire
         a lock.
         """
