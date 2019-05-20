@@ -31,7 +31,7 @@ install_requires = [
 
 setup(
     name='fasteners',
-    version='0.14.1',
+    version='0.15',
     description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
