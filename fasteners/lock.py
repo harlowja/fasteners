@@ -119,6 +119,19 @@ class ReaderWriterLock(object):
     #: Reader owner type/string constant.
     READER = 'r'
 
+    @staticmethod
+    def _fetch_current_thread_functor():
+        # Until https://github.com/eventlet/eventlet/issues/172 is resolved
+        # or addressed we have to use complicated workaround to get a object
+        # that will not be recycled; the usage of threading.current_thread()
+        # doesn't appear to currently be monkey patched and therefore isn't
+        # reliable to use (and breaks badly when used as all threads share
+        # the same current_thread() object)...
+        if eventlet is not None and eventlet_patcher is not None:
+            if eventlet_patcher.is_monkey_patched('thread'):
+                return eventlet.getcurrent
+        return threading.current_thread
+
     def __init__(self,
                  condition_cls=threading.Condition,
                  current_thread_functor=None):
@@ -126,7 +139,9 @@ class ReaderWriterLock(object):
         self._pending_writers = collections.deque()
         self._readers = {}
         self._cond = condition_cls()
-        self._current_thread = threading.current_thread
+        if current_thread_functor is None:
+            current_thread_functor = self._fetch_current_thread_functor()
+        self._current_thread = current_thread_functor
 
     @property
     def has_pending_writers(self):
