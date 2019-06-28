@@ -153,22 +153,26 @@ class _InterProcessLock(object):
             raise ValueError("Timeout must be greater than or equal to zero")
         if delay >= max_delay:
             max_delay = delay
-        self._do_open()
-        watch = _utils.StopWatch(duration=timeout)
-        r = _utils.Retry(delay, max_delay,
-                         sleep_func=self.sleep_func, watch=watch)
-        with watch:
-            gotten = r(self._try_acquire, blocking, watch)
-        if not gotten:
-            self.acquired = False
-            return False
-        else:
-            self.acquired = True
-            self.logger.log(_utils.BLATHER,
-                            "Acquired file lock `%s` after waiting %0.3fs [%s"
-                            " attempts were required]", self.path,
-                            watch.elapsed(), r.attempts)
-            return True
+        try:
+            self._do_open()
+            watch = _utils.StopWatch(duration=timeout)
+            r = _utils.Retry(delay, max_delay,
+                             sleep_func=self.sleep_func, watch=watch)
+            with watch:
+                gotten = r(self._try_acquire, blocking, watch)
+            if not gotten:
+                self.acquired = False
+                return False
+            else:
+                self.acquired = True
+                self.logger.log(_utils.BLATHER,
+                                "Acquired file lock `%s` after waiting %0.3fs [%s"
+                                " attempts were required]", self.path,
+                                watch.elapsed(), r.attempts)
+                return True
+        finally:
+            if not self.acquired:
+                self._do_close()
 
     def _do_close(self):
         if self.lockfile is not None:
