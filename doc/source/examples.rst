@@ -168,3 +168,14 @@ Try lock
             print("I got the lock")
         else:
             print("I did not get the lock")
+
+
+.. code-block:: python
+
+    from fasteners.lock import try_lock_shared
+
+    with try_lock_shared(lk) as got_lock:
+        if gotten:
+            print("I got the lock")
+        else:
+            print("I did not get the lock")

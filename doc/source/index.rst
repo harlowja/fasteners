@@ -9,6 +9,7 @@ A python `package`_ that provides useful locks.
    :maxdepth: 3
 
    api/lock
+   api/fs_lock
    api/process_lock
 
    examples

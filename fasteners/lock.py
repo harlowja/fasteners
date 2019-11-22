@@ -303,3 +303,32 @@ def locked(*args, **kwargs):
             return decorator(args[0])
         else:
             return decorator
+
+
+@contextlib.contextmanager
+def lock_shared(lk):
+    """
+    Context manager which holds shared ownership over the given lockable object
+    ``lk``. Requires ``.acquire_shared()`` and ``.release_shared()`` methods on
+    ``lk``.
+    """
+    lk.acquire_shared()
+    try:
+        yield
+    finally:
+        lk.release_shared()
+
+
+@contextlib.contextmanager
+def try_lock_shared(lk):
+    """
+    Context manager which tries to obtain shared ownership over the lock.
+    Yields a ``bool`` of whether the lock was obtained. Requires
+    ``.acquire_shared()`` and ``.release_shared()`` methods on ``lk``.
+    """
+    got_lock = lk.acquire_shared(False)
+    try:
+        yield got_lock
+    finally:
+        if got_lock:
+            lk.release_shared()
