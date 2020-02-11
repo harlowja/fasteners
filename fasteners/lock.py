@@ -174,14 +174,16 @@ class ReaderWriterLock(object):
         with self._cond:
             while True:
                 # No active writer, or we are the writer;
+                # Also no pending writers;
                 # we are good to become a reader.
-                if self._writer is None or self._writer == me:
+                if ((self._writer is None or self._writer == me) and
+                        not self.has_pending_writers):
                     try:
                         self._readers[me] = self._readers[me] + 1
                     except KeyError:
                         self._readers[me] = 1
                     break
-                # An active writer; guess we have to wait.
+                # An active or pending writer; guess we have to wait.
                 self._cond.wait()
         try:
             yield self
