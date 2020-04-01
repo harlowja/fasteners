@@ -1,9 +1,9 @@
 Examples
 ========
 
-------------------
-Interprocess locks
-------------------
+-------------------
+Inter-process locks
+-------------------
 
 .. note::
 
@@ -15,6 +15,11 @@ Interprocess locks
   single process with these locks (you will have to ensure single process
   safety yourself using traditional thread based locks). In other words this
   lock works **only** between processes.
+
+Lock API
+--------
+
+Using a decorator:
 
 .. code-block:: python
 
@@ -31,6 +36,8 @@ Interprocess locks
     print('Waiting for the lock')
     test()
 
+Using a context manager:
+
 .. code-block:: python
 
     import time
@@ -44,6 +51,8 @@ Interprocess locks
                 time.sleep(1)
 
     test()
+
+Acquiring and releasing manually:
 
 .. code-block:: python
 
@@ -68,9 +77,139 @@ Interprocess locks
 
     test()
 
-----------------------------
-Reader/writer (shared) locks
-----------------------------
+
+Reader Writer Lock API
+----------------------
+
+Reader lock using a decorator:
+
+.. code-block:: python
+
+    import time
+
+    import fasteners
+
+    @fasteners.interprocess_read_locked('/tmp/tmp_lock_file')
+    def test():
+        for i in range(10):
+            print('I have the readers lock')
+            time.sleep(1)
+
+    print('Waiting for the lock')
+    test()
+
+
+Writer lock using a context manager:
+
+.. code-block:: python
+
+    import time
+
+    import fasteners
+
+    def test():
+        for i in range(10):
+            with fasteners.InterProcessReaderWriterLock('/tmp/tmp_lock_file').write_lock():
+                print('I have the writers lock')
+                time.sleep(1)
+
+    test()
+
+
+Acquiring and releasing manually:
+
+.. code-block:: python
+
+    import time
+
+    import fasteners
+
+    def test():
+        a_lock = fasteners.InterProcessReaderWriterLock('/tmp/tmp_lock_file')
+        for i in range(10):
+            gotten = a_lock.acquire_read_lock(blocking=False)
+            try:
+                if gotten:
+                    print('I have the readers lock')
+                    time.sleep(0.2)
+                else:
+                    print('I do not have the readers lock')
+                    time.sleep(0.1)
+            finally:
+                if gotten:
+                    a_lock.release_read_lock()
+
+    test()
+
+
+-------------------
+Inter-thread locks
+-------------------
+
+Lock API
+--------
+
+Using a decorator:
+
+.. code-block:: python
+
+    import threading
+
+    import fasteners
+
+    class NotThreadSafeThing(object):
+        def __init__(self):
+            self._lock = threading.Lock()
+
+        @fasteners.locked
+        def do_something(self):
+            print("Doing something in a thread safe manner")
+
+    o = NotThreadSafeThing()
+    o.do_something()
+
+
+Multiple locks using a single decorator:
+
+.. code-block:: python
+
+    import threading
+
+    import fasteners
+
+    class NotThreadSafeThing(object):
+        def __init__(self):
+            self._locks = [threading.Lock(), threading.Lock()]
+
+        @fasteners.locked(lock='_locks')
+        def do_something(self):
+            print("Doing something in a thread safe manner")
+
+    o = NotThreadSafeThing()
+    o.do_something()
+
+
+Manual lock without blocking:
+
+.. code-block:: python
+
+    import threading
+
+    import fasteners
+
+    t = threading.Lock()
+    with fasteners.try_lock(t) as gotten:
+        if gotten:
+            print("I got the lock")
+        else:
+            print("I did not get the lock")
+
+
+
+Reader Writer lock API
+----------------------
+
+Using a context manager:
 
 .. code-block:: python
 
@@ -109,62 +248,3 @@ Reader/writer (shared) locks
             t = threads.pop()
             t.join()
 
---------------
-Lock decorator
---------------
-
-.. code-block:: python
-
-    import threading
-
-    import fasteners
-
-    class NotThreadSafeThing(object):
-        def __init__(self):
-            self._lock = threading.Lock()
-
-        @fasteners.locked
-        def do_something(self):
-            print("Doing something in a thread safe manner")
-
-    o = NotThreadSafeThing()
-    o.do_something()
-
---------------------
-Multi-lock decorator
---------------------
-
-.. code-block:: python
-
-    import threading
-
-    import fasteners
-
-    class NotThreadSafeThing(object):
-        def __init__(self):
-            self._locks = [threading.Lock(), threading.Lock()]
-
-        @fasteners.locked(lock='_locks')
-        def do_something(self):
-            print("Doing something in a thread safe manner")
-
-    o = NotThreadSafeThing()
-    o.do_something()
-
-
---------
-Try lock
---------
-
-.. code-block:: python
-
-    import threading
-
-    import fasteners
-
-    t = threading.Lock()
-    with fasteners.try_lock(t) as gotten:
-        if gotten:
-            print("I got the lock")
-        else:
-            print("I did not get the lock")

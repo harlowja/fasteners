@@ -22,31 +22,41 @@ Fasteners
 Overview
 --------
 
-A python `package`_ that provides useful locks.
+A python `package`_ that provides cross-platform inter-thread and inter-process
+locks.
 
-It includes the following.
+It includes the following:
 
-Locking decorator
-*****************
+Inter-thread locking decorator
+******************************
 
 * Helpful ``locked`` decorator (that acquires instance
   objects lock(s) and acquires on method entry and
   releases on method exit).
 
-Reader-writer locks
-*******************
+Inter-thread reader writer locks
+********************************
 
 * Multiple readers (at the same time).
-* Single writers (blocking any readers).
+* Single writer (blocking any readers).
 * Helpful ``read_locked`` and ``write_locked`` decorators.
 
-Inter-process locks
-*******************
+Inter-process locking decorator
+*******************************
 
-* Single writer using file based locking (these automatically
-  release on process exit, even if ``__release__`` or
+* Single process lock using a file based locking that automatically
+  release on process exit (even if ``__release__`` or
   ``__exit__`` is never called).
 * Helpful ``interprocess_locked`` decorator.
+
+Inter-process reader writer lock
+********************************
+
+* Multiple readers (at the same time)
+* Singer writer (blokcing any readers)
+* Can be used via ``interprocess_read_locked`` and ``interprocess_write_locked``
+  decorators, or ``read_lock`` and ``write_lock`` context managers.
+* Based on fcntl (Linux, OSX) and LockFileEx (Windows)
 
 Generic helpers
 ***************

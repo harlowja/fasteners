@@ -22,10 +22,11 @@ from __future__ import absolute_import
 
 from fasteners.lock import locked  # noqa
 from fasteners.lock import read_locked  # noqa
+from fasteners.lock import ReaderWriterLock  # noqa
 from fasteners.lock import try_lock  # noqa
 from fasteners.lock import write_locked  # noqa
-
-from fasteners.lock import ReaderWriterLock  # noqa
-from fasteners.process_lock import InterProcessLock  # noqa
-
 from fasteners.process_lock import interprocess_locked  # noqa
+from fasteners.process_lock import interprocess_read_locked  # noqa
+from fasteners.process_lock import interprocess_write_locked  # noqa
+from fasteners.process_lock import InterProcessLock  # noqa
+from fasteners.process_lock import InterProcessReaderWriterLock  # noqa

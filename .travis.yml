@@ -1,16 +1,50 @@
 language: python
-python:
-  - "2.7"
-  - "3.4"
-  - "pypy"
-# https://github.com/travis-ci/travis-ci/issues/4794
-matrix:
+
+jobs:
   include:
-    - python: "3.5"
+    - name: "Python 2.7 on Linux"
+      python: 2.7
+      before_install:
+        - pip install .
+        - pip install -r test-requirements.txt
+
+    - name: "Python 3.6 on Linux"
+      python: 3.6
+      before_install:
+        - pip install .
+        - pip install -r test-requirements.txt
+
+    - name: "Python 3.8 on Linux"
+      python: 3.8
+      before_install:
+        - pip install .
+        - pip install -r test-requirements.txt
+
+    - name: "Python 3.? on macOS"
+      os: osx
+      osx_image: xcode12
+      language: shell
+      before_install:
+        - python3 --version
+        - pip3 install -U pip
+        - pip3 install --user .
+        - pip3 install --user -r test-requirements.txt
+      script:
+        - python3 -m nose
+
+    - name: "Python 3.6 on Windows"
+      os: windows
+      language: shell
+      before_install:
+        - choco install python --version 3.6
+        - python -m pip install --upgrade pip
+        - pip install .
+        - pip install -r test-requirements.txt
+      env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
+
 # command to install dependencies
 install:
-  - "pip install ."
-  - "pip install -r test-requirements.txt"
+  - ls
+
 # command to run tests
 script: nosetests
-
