@@ -22,6 +22,7 @@ import threading
 import time
 
 import six
+from six.moves import range as compat_range  # noqa
 
 from fasteners import _utils
 
@@ -87,12 +88,34 @@ class _InterProcessLock(object):
     acquire the lock (and repeat).
     """
 
-    def __init__(self, path, sleep_func=time.sleep, logger=None):
+    SUPPORTS_OFFSETS = False
+    """
+    Whether or not the lock class implements support for offset based locks.
+    """
+
+    def __init__(self, path, sleep_func=time.sleep, logger=None, offset=None):
+        if offset is not None and offset < 0:
+            raise ValueError("Offset must be greater than or equal to zero")
+        if offset is not None and not self.SUPPORTS_OFFSETS:
+            raise ValueError("Offsets can not be provided (not supported)")
         self.lockfile = None
         self.path = _utils.canonicalize_path(path)
         self.acquired = False
+        self.offset = offset
         self.sleep_func = sleep_func
         self.logger = _utils.pick_first_not_none(logger, LOG)
+
+    @classmethod
+    def make_offset_locks(cls, path, amount,
+                          sleep_func=time.sleep, logger=None):
+        """Create many locks that use the same path (and offsets in it)."""
+        if amount <= 0:
+            raise ValueError("At least one lock must be created")
+        locks = []
+        for i in compat_range(0, amount):
+            locks.append(cls(path, sleep_func=sleep_func,
+                             offset=i, logger=logger))
+        return locks
 
     def _try_acquire(self, blocking, watch):
         try:
@@ -126,6 +149,8 @@ class _InterProcessLock(object):
         # creating a symlink to an important file in our lock path.
         if self.lockfile is None or self.lockfile.closed:
             self.lockfile = open(self.path, 'a')
+            if self.offset is not None and self.offset >= 0:
+                self.lockfile.seek(self.offset)
 
     def acquire(self, blocking=True,
                 delay=DELAY_INCREMENT, max_delay=MAX_DELAY,
@@ -214,30 +239,32 @@ class _InterProcessLock(object):
         return os.path.exists(self.path)
 
     def trylock(self):
-        self._trylock(self.lockfile)
+        self._trylock(self.lockfile,
+                      use_offset=self.offset is not None)
 
     def unlock(self):
-        self._unlock(self.lockfile)
+        self._unlock(self.lockfile,
+                     use_offset=self.offset is not None)
 
     @staticmethod
-    def _trylock():
-        raise NotImplementedError()
+    def _trylock(lockfile, use_offset=False):
+        pass
 
     @staticmethod
-    def _unlock():
-        raise NotImplementedError()
+    def _unlock(lockfile, use_offset=False):
+        pass
 
 
 class _WindowsLock(_InterProcessLock):
     """Interprocess lock implementation that works on windows systems."""
 
     @staticmethod
-    def _trylock(lockfile):
+    def _trylock(lockfile, use_offset=False):
         fileno = lockfile.fileno()
         msvcrt.locking(fileno, msvcrt.LK_NBLCK, 1)
 
     @staticmethod
-    def _unlock(lockfile):
+    def _unlock(lockfile, use_offset=False):
         fileno = lockfile.fileno()
         msvcrt.locking(fileno, msvcrt.LK_UNLCK, 1)
 
@@ -245,13 +272,23 @@ class _WindowsLock(_InterProcessLock):
 class _FcntlLock(_InterProcessLock):
     """Interprocess lock implementation that works on posix systems."""
 
-    @staticmethod
-    def _trylock(lockfile):
-        fcntl.lockf(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    SUPPORTS_OFFSETS = True
 
     @staticmethod
-    def _unlock(lockfile):
-        fcntl.lockf(lockfile, fcntl.LOCK_UN)
+    def _trylock(lockfile, use_offset=False):
+        if use_offset:
+            fcntl.lockf(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB, 1,
+                        lockfile.tell(), os.SEEK_CUR)
+        else:
+            fcntl.lockf(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    @staticmethod
+    def _unlock(lockfile, use_offset=False):
+        if use_offset:
+            fcntl.lockf(lockfile, fcntl.LOCK_UN, 1,
+                        lockfile.tell(), os.SEEK_CUR)
+        else:
+            fcntl.lockf(lockfile, fcntl.LOCK_UN)
 
 
 if os.name == 'nt':
