@@ -254,6 +254,21 @@ class _FcntlLock(_InterProcessLock):
         fcntl.lockf(lockfile, fcntl.LOCK_UN)
 
 
+class _FlockLock(_InterProcessLock):
+    """Interprocess lock implementation that works on posix systems based
+    on https://www.man7.org/linux/man-pages/man2/flock.2.html."""
+
+    @staticmethod
+    def _trylock(lockfile):
+        fileno = lockfile.fileno()
+        fcntl.flock(fileno, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    @staticmethod
+    def _unlock(lockfile):
+        fileno = lockfile.fileno()
+        fcntl.flock(fileno, fcntl.LOCK_UN)
+
+
 if os.name == 'nt':
     import msvcrt
     InterProcessLock = _WindowsLock
