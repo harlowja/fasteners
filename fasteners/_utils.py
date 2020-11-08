@@ -36,7 +36,10 @@ except (ImportError, AttributeError):
 
 import six
 
-from monotonic import monotonic as now  # noqa
+try:
+    from time import monotonic as now
+except (ImportError, AttributeError):
+    from monotonic import monotonic as now  # noqa
 
 # log level for low-level debugging
 BLATHER = 5
