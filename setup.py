@@ -27,6 +27,7 @@ with open("README.rst", "r") as readme:
 install_requires = [
     'six',
     'monotonic>=0.1;python_version<"3.4"',
+    'pywin32;platform_system=="Windows"'
 ]
 
 setup(
