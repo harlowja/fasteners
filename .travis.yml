@@ -20,6 +20,12 @@ jobs:
         - pip install .
         - pip install -r test-requirements.txt
 
+    - name: "PyPy3 on Linux"
+      python: pypy3
+      before_install:
+        - pip install .
+        - pip install -r test-requirements.txt
+
     - name: "Python 3.? on macOS"
       os: osx
       osx_image: xcode12
