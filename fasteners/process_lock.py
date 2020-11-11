@@ -448,33 +448,31 @@ class _WindowsInterProcessReaderWriterLock(_InterProcessReaderWriterLock):
         else:
             flags = win32con.LOCKFILE_FAIL_IMMEDIATELY
 
-        try:
-            win32file.LockFileEx(lockfile, flags, 0, -0x10000, pywintypes.OVERLAPPED())
+        handle = msvcrt.get_osfhandle(lockfile.fileno())
+        ok = win32file.LockFileEx(handle, flags, 0, 1, 0, win32file.pointer(pywintypes.OVERLAPPED()))
+        if ok:
             return True
-        except pywintypes.error as e:
-            if e.args[0] == 33:
+        else:
+            last_error = win32file.GetLastError()
+            if last_error == win32file.ERROR_LOCK_VIOLATION:
                 return False
             else:
-                raise e
+                raise OSError(last_error)
 
     @staticmethod
     def _unlock(lockfile):
-        win32file.UnlockFileEx(lockfile, 0, -0x10000, pywintypes.OVERLAPPED())
+        handle = msvcrt.get_osfhandle(lockfile.fileno())
+        ok = win32file.UnlockFileEx(handle, 0, 1, 0, win32file.pointer(pywintypes.OVERLAPPED()))
+        if not ok:
+            raise OSError(win32file.GetLastError())
 
     @staticmethod
     def _get_handle(path):
-        secur_att = win32security.SECURITY_ATTRIBUTES()
-        secur_att.Initialize()
-        return win32file.CreateFile(path.decode('utf-8'),
-                                    win32con.GENERIC_READ | win32con.GENERIC_WRITE,
-                                    win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE,
-                                    secur_att,
-                                    win32con.OPEN_ALWAYS,
-                                    win32con.FILE_ATTRIBUTE_NORMAL, 0)
+        return open(path, 'a+')
 
     @staticmethod
     def _close_handle(lockfile):
-        lockfile.Close()
+        lockfile.close()
 
 
 class _FcntlInterProcessReaderWriterLock(_InterProcessReaderWriterLock):
@@ -513,10 +511,9 @@ class _FcntlInterProcessReaderWriterLock(_InterProcessReaderWriterLock):
 
 if os.name == 'nt':
     import msvcrt
-    import pywintypes
-    import win32con
-    import win32file
-    import win32security
+    import fasteners.pywin32.pywintypes as pywintypes
+    import fasteners.pywin32.win32con as win32con
+    import fasteners.pywin32.win32file as win32file
 
     InterProcessLock = _WindowsLock
     InterProcessReaderWriterLock = _WindowsInterProcessReaderWriterLock
