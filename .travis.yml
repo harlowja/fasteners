@@ -20,6 +20,12 @@ jobs:
         - pip install .
         - pip install -r test-requirements.txt
 
+    - name: "PyPy on Linux"
+      python: pypy
+      before_install:
+        - pip install .
+        - pip install -r test-requirements.txt
+
     - name: "PyPy3 on Linux"
       python: pypy3
       before_install:
