@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import errno
+import logging
+import os
+import threading
+import time
 # Copyright 2011 OpenStack Foundation.
 # All Rights Reserved.
 #
@@ -15,11 +20,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 from contextlib import contextmanager
-import errno
-import logging
-import os
-import threading
-import time
 
 import six
 
@@ -466,11 +466,19 @@ class _WindowsInterProcessReaderWriterLock(_InterProcessReaderWriterLock):
 
     @staticmethod
     def _get_handle(path):
-        return msvcrt.get_osfhandle(open(path, 'a+'))
+        return win32file.CreateFileW(path.decode('utf-8'),
+                                     win32con.GENERIC_READ | win32con.GENERIC_WRITE,
+                                     win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE,
+                                     win32file.pointer(pywintypes.SECURITY_ATTRIBUTES()),
+                                     win32con.OPEN_ALWAYS,
+                                     win32con.FILE_ATTRIBUTE_NORMAL,
+                                     0)
 
     @staticmethod
     def _close_handle(lockfile):
-        lockfile.Close()
+        ok = win32file.CloseHandle(lockfile)
+        if not ok:
+            return OSError(ok)
 
 
 class _FcntlInterProcessReaderWriterLock(_InterProcessReaderWriterLock):

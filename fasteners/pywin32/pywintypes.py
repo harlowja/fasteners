@@ -1,3 +1,4 @@
+from ctypes import c_bool
 from ctypes import c_void_p
 from ctypes import Structure
 from ctypes import Union
@@ -27,4 +28,12 @@ class OVERLAPPED(Structure):
         ('InternalHigh', c_void_p),
         ('_offset_or_ptr', _DummyUnion),
         ('hEvent', HANDLE),
+    ]
+
+
+class SECURITY_ATTRIBUTES(Structure):
+    _fields_ = [
+        ('nLength', DWORD),
+        ('lpSecurityDescriptor', c_void_p),
+        ('bInheritHandle', c_bool)
     ]
