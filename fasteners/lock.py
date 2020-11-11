@@ -25,15 +25,6 @@ from fasteners import _utils
 
 import six
 
-try:
-    # Used for the reader-writer lock get the right
-    # thread 'hack' (needed below).
-    import eventlet
-    from eventlet import patcher as eventlet_patcher
-except ImportError:
-    eventlet = None
-    eventlet_patcher = None
-
 
 def read_locked(*args, **kwargs):
     """Acquires & releases a read lock around call into decorated method.
