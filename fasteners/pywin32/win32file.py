@@ -34,9 +34,7 @@ UnlockFileEx.argtypes = [
 ]
 UnlockFileEx.restype = BOOL
 
-# Errors/flags
-GetLastError = windll.kernel32.GetLastError
-
+# https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
 CreateFileW = windll.kernel32.CreateFileW
 CreateFileW.argtypes = [
     LPCWSTR,
@@ -49,8 +47,12 @@ CreateFileW.argtypes = [
 ]
 CreateFileW.restype = HANDLE
 
+# https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
 CloseHandle = windll.kernel32.CloseHandle
-CloseHandle.argyptes = [
+CloseHandle.argtypes = [
     HANDLE
 ]
 CloseHandle.restype = BOOL
+
+# Errors/flags
+GetLastError = windll.kernel32.GetLastError
