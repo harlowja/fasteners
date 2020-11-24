@@ -17,7 +17,9 @@ pip install fasteners
 
 🔩 Usage
 --------
-Exclusive lock for processes (same API as [threading.Lock](https://docs.python.org/3/library/threading.html#threading.Lock))
+Lock for processes has the same API as the 
+[threading.Lock](https://docs.python.org/3/library/threading.html#threading.Lock)
+for threads:
 ```python
 import fasteners
 import threading
@@ -26,16 +28,16 @@ lock = threading.Lock()                                 # for threads
 lock = fasteners.InterProcessLock('path/to/lock.file')  # for processes
 
 with lock:
-    ... # access resource
+    ... # exclusive access
 
 # or alternatively    
 
 lock.acquire()
-... # access resource
+... # exclusive access
 lock.release()
 ```
 
-Reader Writer lock for threads or processes:
+Reader Writer lock has a similar API, which is the same for threads or processes:
 
 ```python
 import fasteners
@@ -44,24 +46,30 @@ rw_lock = fasteners.ReaderWriterLock()                                 # for thr
 rw_lock = fasteners.InterProcessReaderWriterLock('path/to/lock.file')  # for processes
 
 with rw_lock.write_locked():
-    ... # write to resource
+    ... # write access
 
 with rw_lock.read_locked():
-    ... # read from resource
+    ... # read access
 
 # or alternatively
 
 rw_lock.acquire_read_lock()
-... # read from resource
+... # read access
 rw_lock.release_read_lock()
 
 rw_lock.acquire_write_lock()
-... # write to resource
+... # write access
 rw_lock.release_write_lock()
 ```
 
 🔩 Overview
 -----------
+
+Python standard library provides a lock for threads (both a reentrant one, and a
+non-reentrant one, see below). Fasteners extends this, and provides a lock for
+processes, as well as Reader Writer locks for both threads and processes.
+
+The specifics of the locks are as follows:
 
 ### Process locks
 
@@ -103,3 +111,41 @@ The `fasteners.ReaderWriterLock` at the moment is as follows:
 | lock | reentrant | mandatory | upgradable | preference | 
 |------|-----------|-----------|-------------|------------|
 | fasteners.ReaderWriterLock | ✔ | ✘ | ✘ | reader |
+
+🔩 Glossary
+-----------
+To learn more about the various aspects of locks, check the wikipedia pages for 
+[locks](https://en.wikipedia.org/wiki/Lock_(computer_science)) and 
+[readers writer locks](https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock) as well as the
+[resources](https://github.com/harlowja/fasteners/blob/master/doc/source/api/process_lock.rst) listed in the 
+documentation. Here we briefly mention the main notions used above.
+
+* **Lock** - a mechanism that prevents two or more threads or processes from running the same code at the same time.
+* **Readers writer lock** - a mechanism that prevents two or more threads from having write (or write and read) access, 
+while allowing multiple readers.
+* **Reentrant lock** - a lock that can be acquired (and then released) multiple times, as in:
+
+```python
+with lock:
+    with lock:
+        ... # some code
+```
+* **Mandatory lock** (as opposed to advisory lock) - a lock that is enforced by the operating system, rather than
+by the cooperation between threads or processes
+* **Upgradable readers writer lock** - a readers writer lock that can be upgraded from reader to writer (or downgraded
+from writer to reader) without losing the lock that is already held, as in:
+```python
+with rw_lock.read_locked():
+    ... # read access
+    with rw_lock.write_locked():
+        ... # write access
+    ... # read access
+```
+* **Readers writer lock preference** - describes the behaviour when multiple threads or processes are waiting for 
+access. Some of the patterns are:
+    * **Reader preference** - If lock is held by readers, then new readers will get immediate access. This can result
+    in writers waiting forever (writer starvation)
+    * **Writer preference** - If writer is waiting for a lock, then all the new readers (and writers) will be queued
+    after the writer.
+    * **Phase fair** - Lock that alternates between readers and writers.
+
