@@ -17,95 +17,89 @@ pip install fasteners
 
 🔩 Usage
 --------
-
-Reader Writer locks for threads or processes:
-
+Exclusive lock for processes (same API as [threading.Lock](https://docs.python.org/3/library/threading.html#threading.Lock))
 ```python
 import fasteners
+import threading
 
-rw_lock = fasteners.ReaderWriterLock()                            # for threads
-rw_lock = fasteners.InterProcessReaderWriterLock('path/to/file')  # for processes
+lock = threading.Lock()                                 # for threads
+lock = fasteners.InterProcessLock('path/to/lock.file')  # for processes
 
-with rw_lock.write_locked():
-    ... # write_to_resource
+with lock:
+    ... # access resource
 
-with rw_lock.read_locked():
-    ... # read_from_resource
+# or alternatively    
 
+lock.acquire()
+... # access resource
+lock.release()
 ```
 
-Or, if you prefer using decorators:
+Reader Writer lock for threads or processes:
 
 ```python
 import fasteners
 
-@fasteners.locked()
-def something_for_one_thread_only():
-    ...
+rw_lock = fasteners.ReaderWriterLock()                                 # for threads
+rw_lock = fasteners.InterProcessReaderWriterLock('path/to/lock.file')  # for processes
 
-@fasteners.interprocess_locked('path/to/file')
-def something_for_one_process_only():
-    ...
+with rw_lock.write_locked():
+    ... # write to resource
 
-# works for methods as well
-class SomeResource:
-        
-    @fasteners.read_locked()
-    def read_resource(self):
-        ...
+with rw_lock.read_locked():
+    ... # read from resource
 
-    @fasteners.write_locked()
-    def write_resource(self):
-        ...
+# or alternatively
 
-# same for processes:
-# @fasteners.interprocess_locked
-# @fasteners.interprocess_read_locked
-# @fasteners.interprocess_write_locked
+rw_lock.acquire_read_lock()
+... # read from resource
+rw_lock.release_read_lock()
+
+rw_lock.acquire_write_lock()
+... # write to resource
+rw_lock.release_write_lock()
 ```
 
 🔩 Overview
 -----------
 
-It includes the following:
+### Process locks
 
-Inter-thread locking decorator
-******************************
+The `fasteners.InterProcessLock` uses [fcntl](https://man7.org/linux/man-pages/man2/fcntl.2.html) on Unix-like systems and 
+msvc [_locking](https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/locking?view=msvc-160) on Windows. 
+As a result, if used cross-platform it guarantees an intersection of their features:
 
-* Helpful ``locked`` decorator (that acquires instance
-  objects lock(s) and acquires on method entry and
-  releases on method exit).
+| lock | reentrant | mandatory |
+|------|-----------|-----------|
+| fcntl                        | ✘ | ✘ |
+| _locking                     | ✔ | ✔ |
+| fasteners.InterProcessLock   | ✘ | ✘ |
 
-Inter-thread reader writer locks
-********************************
 
-* Multiple readers (at the same time).
-* Single writer (blocking any readers).
-* Helpful ``read_locked`` and ``write_locked`` decorators.
+The `fasteners.InterProcessReaderWriterLock` also uses fcntl on Unix-like systems and 
+[LockFileEx](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex) on Windows. Their 
+features are as follows:
 
-Inter-process locking decorator
-*******************************
+| lock | reentrant | mandatory | upgradable | preference | 
+|------|-----------|-----------|------------|------------|
+| fcntl                                    | ✘ | ✘ | ✔ | reader |
+| LockFileEx                               | ✔ | ✔ | ✘ | reader |
+| fasteners.InterProcessReaderWriterLock   | ✘ | ✘ | ✘ | reader |
 
-* Single process lock using a file based locking that automatically
-  release on process exit (even if ``__release__`` or
-  ``__exit__`` is never called).
-* Helpful ``interprocess_locked`` decorator.
 
-Inter-process reader writer lock
-********************************
+### Thread locks
 
-* Multiple readers (at the same time)
-* Singer writer (blokcing any readers)
-* Can be used via ``interprocess_read_locked`` and ``interprocess_write_locked``
-  decorators, or ``read_lock`` and ``write_lock`` context managers.
-* Based on fcntl (Linux, OSX) and LockFileEx (Windows)
+Fasteners do not provide a simple thread lock, but for the sake of comparison note that the `threading` module
+provides both a reentrant and non-reentrant locks:
 
-Generic helpers
-***************
+| lock | reentrant | mandatory |
+|------|-----------|-----------|
+| threading.Lock  | ✘ | ✘ |
+| threading.RLock | ✔ | ✘ |
 
-* A ``try_lock`` helper context manager that will attempt to
-  acquire a given lock and provide back whether the attempt
-  passed or failed (if it passes, then further code in the
-  context manager will be ran **with** the lock acquired).
 
-.. _package: https://pypi.python.org/pypi/fasteners
+The `fasteners.ReaderWriterLock` at the moment is as follows:
+
+| lock | reentrant | mandatory | upgradable | preference | 
+|------|-----------|-----------|-------------|------------|
+| fasteners.ReaderWriterLock | ✔ | ✘ | ✘ | reader |
