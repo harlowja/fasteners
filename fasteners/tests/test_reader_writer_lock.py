@@ -13,7 +13,6 @@ from diskcache import Deque
 from six import wraps
 
 from fasteners import test
-from fasteners._utils import StopWatch
 from fasteners.process_lock import InterProcessReaderWriterLock as ReaderWriterLock
 
 PROCESS_COUNT = 20
@@ -37,11 +36,8 @@ def run_doesnt_hang(disk_cache_dir, lock_file, type_):
 
 @unpack
 def run_no_concurrent_writers(disk_cache_dir, lock_file):
-    watch = StopWatch(duration=1)
-    watch.start()
-
     with Cache(disk_cache_dir) as dc_:
-        while not watch.expired():
+        for _ in range(10):
             no_concurrent_writers_acquire_check(dc_, lock_file)
 
 
@@ -57,11 +53,8 @@ def no_concurrent_writers_acquire_check(dc_, lock_file):
 
 @unpack
 def run_no_cuncurrent_readers_writers(disk_cache_dir, lock_file):
-    watch = StopWatch(duration=1)
-    watch.start()
-
     with Cache(disk_cache_dir) as dc_:
-        while not watch.expired():
+        for _ in range(10):
             no_concurrent_readers_writers_acquire_check(dc_, lock_file,
                                                         random.choice([True, False]))
 
@@ -147,7 +140,7 @@ class ProcessReaderWriterLock(test.TestCase):
         with Cache(self.disk_cache_dir) as dc:
             self.assertEqual(dc.get('active_count'), 0)
             self.assertEqual(dc.get('dups_count'), None)
-            self.assertGreaterEqual(dc.get('visited_count'), 25)
+            self.assertEqual(dc.get('visited_count'), 10 * PROCESS_COUNT)
 
     def test_no_concurrent_readers_writers(self):
         pool = Pool(PROCESS_COUNT)
@@ -157,7 +150,7 @@ class ProcessReaderWriterLock(test.TestCase):
         with Cache(self.disk_cache_dir) as dc:
             self.assertEqual(dc.get('active_count'), 0)
             self.assertEqual(dc.get('dups_count'), None)
-            self.assertGreaterEqual(dc.get('visited_count'), 10)
+            self.assertEqual(dc.get('visited_count'), 10 * PROCESS_COUNT)
 
     def test_writer_releases_lock_upon_crash(self):
         p1 = Process(target=run_writer_releases_lock_upon_crash,
