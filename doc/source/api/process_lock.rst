@@ -35,7 +35,9 @@ recommend the following resources:
 
 * `On the Brokenness of File Locking (blog post)`_
 
-* `Everything you never wanted to know about file locking`_
+* `Everything you never wanted to know about file locking (blog post)`_
+
+* `Record Locking (course notes)`_
 
 * `Windows NT Files -- Locking (pywin32 docs)`_
 
@@ -47,10 +49,11 @@ recommend the following resources:
 .. _reentrant: https://en.wikipedia.org/wiki/Reentrant_mutex
 .. _File locking in Linux (blog post): https://gavv.github.io/articles/file-locks/
 .. _On the Brokenness of File Locking (blog post): http://0pointer.de/blog/projects/locking.html
+.. _Record Locking (course notes): http://poincare.matf.bg.ac.rs/~ivana/courses/ps/sistemi_knjige/pomocno/apue/APUE/0201433079/ch14lev1sec3.html
 .. _Windows NT Files -- Locking (pywin32 docs): http://timgolden.me.uk/pywin32-docs/Windows_NT_Files_.2d.2d_Locking.html
 .. _\_locking (Windows Dev Center): https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/locking?view=vs-2019
 .. _LockFileEx function (Windows Dev Center): https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
-.. _Everything you never wanted to know about file locking: https://chris.improbable.org/2010/12/16/everything-you-never-wanted-to-know-about-file-locking/
+.. _Everything you never wanted to know about file locking (blog post): https://chris.improbable.org/2010/12/16/everything-you-never-wanted-to-know-about-file-locking/
 
 -------
 Classes
