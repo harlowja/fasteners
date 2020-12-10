@@ -1,3 +1,14 @@
+0.16:
+  - Move from travis and appveyor to github actions
+  - Add interprocess reader writer lock
+  - Improve README
+  - remove unused eventlet import
+  - use stdlib monotonic instead of external for python >= 3.4
+0.15:
+  - Add testing for additional python versions
+  - Remove python 2.6 support
+  - Remove eventlet dependency and use
+    threading.current_thread instead
 0.14:
   - Allow providing a custom exception logger
     to 'locked' decorator
