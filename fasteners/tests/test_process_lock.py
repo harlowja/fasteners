@@ -250,6 +250,45 @@ class ProcessLockTest(test.TestCase):
 
             child_pipe.send(None)
 
+    def test_close_fd_on_failed_acquire(self):
+        '''Tests that the lockfile fd is closed after failing to acquire the
+           lock (e.g., non-blocking timeout).'''
+        lock_file = os.path.join(self.lock_dir, 'lock')
+        lock_name = 'foo'
+
+        child_pipe, them = multiprocessing.Pipe()
+        child = multiprocessing.Process(
+            target=inter_processlock_helper, args=(lock_name, lock_file, them))
+
+        with scoped_child_processes((child,)):
+
+            # Make sure the child grabs the lock first
+            if not child_pipe.poll(5):
+                self.fail('Timed out waiting for child to grab lock')
+
+            # Attempt to lock the file without blocking. This will fail, since
+            # the child has it.
+            lock1 = pl.InterProcessLock(lock_name)
+            lock1.lockfile = open(lock_file, 'w')
+            self.assertFalse(lock1.acquire(blocking=False))
+
+            # Since locking failed, the fd was closed.
+            self.assertIsNone(lock1.lockfile)
+
+            # Ask the child to release the lock.
+            child_pipe.send(None)
+
+            # Acquire the lock, to verify it remains open while locked.
+            self.assertTrue(lock1.acquire(blocking=False, timeout=0.1))
+
+            # The lockfile remains open; necessary while the lock is held.
+            self.assertIsNotNone(lock1.lockfile)
+            self.assertFalse(lock1.lockfile.closed)
+
+            # Releasing the lock should close the lockfile.
+            lock1.release()
+            self.assertTrue(lock1.lockfile is None or lock1.lockfile.closed)
+
     @test.testtools.skipIf(WIN32, "Windows cannot open file handles twice")
     def test_non_destructive(self):
         lock_file = os.path.join(self.lock_dir, 'not-destroyed')
