@@ -10,20 +10,11 @@ from pathlib import Path
 import more_itertools as mo
 from diskcache import Cache
 from diskcache import Deque
-from six import wraps
 
 from fasteners import test
 from fasteners.process_lock import InterProcessReaderWriterLock as ReaderWriterLock
 
 PROCESS_COUNT = 20
-
-
-def unpack(func):
-    @wraps(func)
-    def wrapper(arg_tuple):
-        return func(*arg_tuple)
-
-    return wrapper
 
 
 def run_doesnt_hang(disk_cache_dir, lock_file, type_):
@@ -34,7 +25,6 @@ def run_doesnt_hang(disk_cache_dir, lock_file, type_):
             dc_.incr(type_)
 
 
-@unpack
 def run_no_concurrent_writers(disk_cache_dir, lock_file):
     with Cache(disk_cache_dir) as dc_:
         for _ in range(10):
@@ -51,8 +41,7 @@ def no_concurrent_writers_acquire_check(dc_, lock_file):
         dc_.incr('visited_count')
 
 
-@unpack
-def run_no_cuncurrent_readers_writers(disk_cache_dir, lock_file):
+def run_no_concurrent_readers_writers(disk_cache_dir, lock_file):
     with Cache(disk_cache_dir) as dc_:
         for _ in range(10):
             no_concurrent_readers_writers_acquire_check(dc_, lock_file,
@@ -134,8 +123,8 @@ class ProcessReaderWriterLock(test.TestCase):
 
     def test_no_concurrent_writers(self):
         pool = Pool(PROCESS_COUNT)
-        pool.map(run_no_concurrent_writers, [(self.disk_cache_dir, self.lock_file)] * PROCESS_COUNT,
-                 chunksize=1)
+        pool.starmap(run_no_concurrent_writers, [(self.disk_cache_dir, self.lock_file)] * PROCESS_COUNT,
+                     chunksize=1)
 
         with Cache(self.disk_cache_dir) as dc:
             self.assertEqual(dc.get('active_count'), 0)
@@ -144,8 +133,8 @@ class ProcessReaderWriterLock(test.TestCase):
 
     def test_no_concurrent_readers_writers(self):
         pool = Pool(PROCESS_COUNT)
-        pool.map(run_no_cuncurrent_readers_writers,
-                 [(self.disk_cache_dir, self.lock_file)] * PROCESS_COUNT, chunksize=1)
+        pool.starmap(run_no_concurrent_readers_writers,
+                     [(self.disk_cache_dir, self.lock_file)] * PROCESS_COUNT, chunksize=1)
 
         with Cache(self.disk_cache_dir) as dc:
             self.assertEqual(dc.get('active_count'), 0)
@@ -228,11 +217,10 @@ class ProcessReaderWriterLock(test.TestCase):
 def _spawn_variation(disk_cache_dir, lock_file, readers, writers):
     visits = Deque(directory=str(disk_cache_dir / 'w'))
     pool = Pool(readers + writers)
-    pool.map(_spawling, [(lock_file, visits, type_) for type_ in ['w'] * writers + ['r'] * readers])
+    pool.starmap(_spawling, [(lock_file, visits, type_) for type_ in ['w'] * writers + ['r'] * readers])
     return visits
 
 
-@unpack
 def _spawling(lock_file, visits, type_):
     lock = ReaderWriterLock(lock_file)
 

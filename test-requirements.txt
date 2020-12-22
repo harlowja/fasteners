@@ -1,8 +1,7 @@
-diskcache==4.1.0
+diskcache
 more_itertools
 nose
 testtools
 futures
-pathlib
 sphinx
 sphinx-rtd-theme
