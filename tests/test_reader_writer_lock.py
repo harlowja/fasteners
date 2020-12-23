@@ -28,15 +28,17 @@ def lock_file():
 @pytest.fixture()
 def dc():
     disk_cache_dir_ = tempfile.mkdtemp()
-    yield Cache(directory=disk_cache_dir_)
-    shutil.rmtree(disk_cache_dir_)
+    with Cache(directory=disk_cache_dir_) as dc:
+        yield dc
+    shutil.rmtree(disk_cache_dir_, ignore_errors=True)
 
 
 @pytest.fixture()
 def deque():
     disk_cache_dir_ = tempfile.mkdtemp()
-    yield Deque(directory=disk_cache_dir_)
-    shutil.rmtree(disk_cache_dir_)
+    with Cache(directory=disk_cache_dir_) as dc:
+        yield Deque.fromcache(dc)
+    shutil.rmtree(disk_cache_dir_, ignore_errors=True)
 
 
 def test_lock(lock_file):
