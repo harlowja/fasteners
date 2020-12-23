@@ -25,24 +25,11 @@ import tempfile
 import threading
 import time
 
+import pytest
+
 from fasteners import process_lock as pl
-from fasteners import test
 
 WIN32 = os.name == 'nt'
-
-
-class BrokenLock(pl.InterProcessLock):
-    def __init__(self, name, errno_code):
-        super(BrokenLock, self).__init__(name)
-        self.errno_code = errno_code
-
-    def unlock(self):
-        pass
-
-    def trylock(self):
-        err = IOError()
-        err.errno = self.errno_code
-        raise err
 
 
 @contextlib.contextmanager
@@ -77,12 +64,78 @@ def try_lock(lock_file):
         my_lock.lockfile = open(lock_file, 'w')
         my_lock.trylock()
         my_lock.unlock()
-        os._exit(1)
+        sys.exit(1)
     except IOError:
-        os._exit(0)
+        sys.exit(0)
 
 
-def lock_files(lock_path, handles_dir, num_handles=50):
+def inter_processlock_helper(lockname, lock_filename, pipe):
+    lock2 = pl.InterProcessLock(lockname)
+    lock2.lockfile = open(lock_filename, 'w')
+    have_lock = False
+    while not have_lock:
+        try:
+            lock2.trylock()
+            have_lock = True
+        except IOError:
+            pass
+    # Hold the lock and wait for the parent
+    pipe.send(None)
+    pipe.recv()
+
+
+@pytest.fixture()
+def lock_dir():
+    tmp_dir = tempfile.mkdtemp()
+    yield tmp_dir
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@pytest.fixture()
+def handles_dir():
+    tmp_dir = tempfile.mkdtemp()
+    yield tmp_dir
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def test_lock_acquire_release_file_lock(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
+    lock = pl.InterProcessLock(lock_file)
+
+    def attempt_acquire(count):
+        children = [
+            multiprocessing.Process(target=try_lock, args=(lock_file,))
+            for i in range(count)]
+        with scoped_child_processes(children, timeout=10, exitcode=None):
+            pass
+        return sum(c.exitcode for c in children)
+
+    assert lock.acquire()
+    try:
+        acquired_children = attempt_acquire(10)
+        assert acquired_children == 0
+    finally:
+        lock.release()
+
+    acquired_children = attempt_acquire(5)
+    assert acquired_children != 0
+
+
+def test_nested_synchronized_external_works(lock_dir):
+    sentinel = object()
+
+    @pl.interprocess_locked(os.path.join(lock_dir, 'test-lock-1'))
+    def outer_lock():
+        @pl.interprocess_locked(os.path.join(lock_dir, 'test-lock-2'))
+        def inner_lock():
+            return sentinel
+
+        return inner_lock()
+
+    assert outer_lock() == sentinel
+
+
+def _lock_files(lock_path, handles_dir, num_handles=50):
     with pl.InterProcessLock(lock_path):
 
         # Open some files we can use for locking
@@ -102,7 +155,7 @@ def lock_files(lock_path, handles_dir, num_handles=50):
                 count += 1
                 pl.InterProcessLock._unlock(handle)
             except IOError:
-                os._exit(2)
+                sys.exit(2)
             finally:
                 handle.close()
 
@@ -111,150 +164,107 @@ def lock_files(lock_path, handles_dir, num_handles=50):
             raise AssertionError("Unable to open all handles")
 
 
-def inter_processlock_helper(lockname, lock_filename, pipe):
-    lock2 = pl.InterProcessLock(lockname)
-    lock2.lockfile = open(lock_filename, 'w')
-    have_lock = False
-    while not have_lock:
-        try:
-            lock2.trylock()
-            have_lock = True
-        except IOError:
-            pass
-    # Hold the lock and wait for the parent
-    pipe.send(None)
-    pipe.recv()
+def _do_test_lock_externally(lock_dir_, handles_dir_):
+    lock_path = os.path.join(lock_dir_, "lock")
+
+    num_handles = 50
+    num_processes = 50
+    args = (lock_path, handles_dir_, num_handles)
+    children = [multiprocessing.Process(target=_lock_files, args=args)
+                for _ in range(num_processes)]
+
+    with scoped_child_processes(children, timeout=30, exitcode=0):
+        pass
 
 
-class ProcessLockTest(test.TestCase):
-    def setUp(self):
-        super(ProcessLockTest, self).setUp()
-        self.lock_dir = tempfile.mkdtemp()
-        self.tmp_dirs = [self.lock_dir]
+def test_lock_externally(lock_dir, handles_dir):
+    _do_test_lock_externally(lock_dir, handles_dir)
 
-    def tearDown(self):
-        super(ProcessLockTest, self).tearDown()
-        for a_dir in reversed(self.tmp_dirs):
-            if os.path.exists(a_dir):
-                shutil.rmtree(a_dir, ignore_errors=True)
 
-    def test_lock_acquire_release_file_lock(self):
-        lock_file = os.path.join(self.lock_dir, 'lock')
-        lock = pl.InterProcessLock(lock_file)
+def test_lock_externally_lock_dir_not_exist(lock_dir, handles_dir):
+    os.rmdir(lock_dir)
+    _do_test_lock_externally(lock_dir, handles_dir)
 
-        def attempt_acquire(count):
-            children = [
-                multiprocessing.Process(target=try_lock, args=(lock_file,))
-                for i in range(count)]
-            with scoped_child_processes(children, timeout=10, exitcode=None):
-                pass
-            return sum(c.exitcode for c in children)
 
-        self.assertTrue(lock.acquire())
-        try:
-            acquired_children = attempt_acquire(10)
-            self.assertEqual(0, acquired_children)
-        finally:
-            lock.release()
+def test_lock_file_exists(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
 
-        acquired_children = attempt_acquire(5)
-        self.assertNotEqual(0, acquired_children)
+    @pl.interprocess_locked(lock_file)
+    def foo():
+        assert os.path.exists(lock_file)
 
-    def test_nested_synchronized_external_works(self):
-        sentinel = object()
+    foo()
 
-        @pl.interprocess_locked(os.path.join(self.lock_dir, 'test-lock-1'))
-        def outer_lock():
 
-            @pl.interprocess_locked(os.path.join(self.lock_dir, 'test-lock-2'))
-            def inner_lock():
-                return sentinel
+def test_bad_release(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
+    lock = pl.InterProcessLock(lock_file)
+    with pytest.raises(threading.ThreadError):
+        lock.release()
 
-            return inner_lock()
 
-        self.assertEqual(sentinel, outer_lock())
+def test_interprocess_lock(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
+    lock_name = 'foo'
 
-    def _do_test_lock_externally(self, lock_dir):
-        lock_path = os.path.join(lock_dir, "lock")
+    child_pipe, them = multiprocessing.Pipe()
+    child = multiprocessing.Process(
+        target=inter_processlock_helper, args=(lock_name, lock_file, them))
 
-        handles_dir = tempfile.mkdtemp()
-        self.tmp_dirs.append(handles_dir)
+    with scoped_child_processes((child,)):
 
-        num_handles = 50
-        num_processes = 50
-        args = [lock_path, handles_dir, num_handles]
-        children = [multiprocessing.Process(target=lock_files, args=args)
-                    for _ in range(num_processes)]
+        # Make sure the child grabs the lock first
+        if not child_pipe.poll(5):
+            pytest.fail('Timed out waiting for child to grab lock')
 
-        with scoped_child_processes(children, timeout=30, exitcode=0):
-            pass
+        start = time.time()
+        lock1 = pl.InterProcessLock(lock_name)
+        lock1.lockfile = open(lock_file, 'w')
+        # NOTE(bnemec): There is a brief window between when the lock file
+        # is created and when it actually becomes locked.  If we happen to
+        # context switch in that window we may succeed in locking the
+        # file. Keep retrying until we either get the expected exception
+        # or timeout waiting.
+        while time.time() - start < 5:
+            try:
+                lock1.trylock()
+                lock1.unlock()
+                time.sleep(0)
+            except IOError:
+                # This is what we expect to happen
+                break
+        else:
+            pytest.fail('Never caught expected lock exception')
 
-    def test_lock_externally(self):
-        self._do_test_lock_externally(self.lock_dir)
+        child_pipe.send(None)
 
-    def test_lock_externally_lock_dir_not_exist(self):
-        os.rmdir(self.lock_dir)
-        self._do_test_lock_externally(self.lock_dir)
 
-    def test_lock_file_exists(self):
-        lock_file = os.path.join(self.lock_dir, 'lock')
+@pytest.mark.skipif(WIN32, reason='Windows cannot open file handles twice')
+def test_non_destructive(lock_dir):
+    lock_file = os.path.join(lock_dir, 'not-destroyed')
+    with open(lock_file, 'w') as f:
+        f.write('test')
+    with pl.InterProcessLock(lock_file):
+        with open(lock_file) as f:
+            assert f.read() == 'test'
 
-        @pl.interprocess_locked(lock_file)
-        def foo():
-            self.assertTrue(os.path.exists(lock_file))
 
-        foo()
+class BrokenLock(pl.InterProcessLock):
+    def __init__(self, name, errno_code):
+        super(BrokenLock, self).__init__(name)
+        self.errno_code = errno_code
 
-    def test_bad_acquire(self):
-        lock_file = os.path.join(self.lock_dir, 'lock')
-        lock = BrokenLock(lock_file, errno.EBUSY)
-        self.assertRaises(threading.ThreadError, lock.acquire)
+    def unlock(self):
+        pass
 
-    def test_bad_release(self):
-        lock_file = os.path.join(self.lock_dir, 'lock')
-        lock = pl.InterProcessLock(lock_file)
-        self.assertRaises(threading.ThreadError, lock.release)
+    def trylock(self):
+        err = IOError()
+        err.errno = self.errno_code
+        raise err
 
-    def test_interprocess_lock(self):
-        lock_file = os.path.join(self.lock_dir, 'lock')
-        lock_name = 'foo'
 
-        child_pipe, them = multiprocessing.Pipe()
-        child = multiprocessing.Process(
-            target=inter_processlock_helper, args=(lock_name, lock_file, them))
-
-        with scoped_child_processes((child,)):
-
-            # Make sure the child grabs the lock first
-            if not child_pipe.poll(5):
-                self.fail('Timed out waiting for child to grab lock')
-
-            start = time.time()
-            lock1 = pl.InterProcessLock(lock_name)
-            lock1.lockfile = open(lock_file, 'w')
-            # NOTE(bnemec): There is a brief window between when the lock file
-            # is created and when it actually becomes locked.  If we happen to
-            # context switch in that window we may succeed in locking the
-            # file. Keep retrying until we either get the expected exception
-            # or timeout waiting.
-            while time.time() - start < 5:
-                try:
-                    lock1.trylock()
-                    lock1.unlock()
-                    time.sleep(0)
-                except IOError:
-                    # This is what we expect to happen
-                    break
-            else:
-                self.fail('Never caught expected lock exception')
-
-            child_pipe.send(None)
-
-    @test.testtools.skipIf(WIN32, "Windows cannot open file handles twice")
-    def test_non_destructive(self):
-        lock_file = os.path.join(self.lock_dir, 'not-destroyed')
-        with open(lock_file, 'w') as f:
-            f.write('test')
-        with pl.InterProcessLock(lock_file):
-            with open(lock_file) as f:
-                self.assertEqual(f.read(), 'test')
+def test_bad_acquire(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
+    lock = BrokenLock(lock_file, errno.EBUSY)
+    with pytest.raises(threading.ThreadError):
+        lock.acquire()

@@ -20,9 +20,10 @@ import random
 import threading
 import time
 
+import pytest
+
 import fasteners
 from fasteners import _utils
-from fasteners import test
 
 # NOTE(harlowja): Sleep a little so now() can not be the same (which will
 # cause false positives when our overlap detection code runs). If there are
@@ -35,6 +36,8 @@ WORK_TIMES = [(0.01 + x / 100.0) for x in range(0, 5)]
 # If latches/events take longer than this to become empty/set, something is
 # usually wrong and should be debugged instead of deadlocking...
 WAIT_TIMEOUT = 300
+
+THREAD_COUNT = 20
 
 
 def _find_overlaps(times, start, end):
@@ -84,7 +87,7 @@ def _spawn_variation(readers, writers, max_workers=None):
             writer_times.append((start, stop))
         else:
             reader_times.append((start, stop))
-    return (writer_times, reader_times)
+    return writer_times, reader_times
 
 
 def _daemon_thread(target):
@@ -93,314 +96,328 @@ def _daemon_thread(target):
     return t
 
 
-class ReadWriteLockTest(test.TestCase):
-    THREAD_COUNT = 20
+def test_no_double_writers():
+    lock = fasteners.ReaderWriterLock()
+    watch = _utils.StopWatch(duration=5)
+    watch.start()
+    dups = collections.deque()
+    active = collections.deque()
 
-    def test_no_double_writers(self):
-        lock = fasteners.ReaderWriterLock()
-        watch = _utils.StopWatch(duration=5)
-        watch.start()
-        dups = collections.deque()
-        active = collections.deque()
+    def acquire_check(me):
+        with lock.write_lock():
+            if len(active) >= 1:
+                dups.append(me)
+                dups.extend(active)
+            active.append(me)
+            try:
+                time.sleep(random.random() / 100)
+            finally:
+                active.remove(me)
 
-        def acquire_check(me):
-            with lock.write_lock():
+    def run():
+        me = threading.current_thread()
+        while not watch.expired():
+            acquire_check(me)
+
+    threads = []
+    for i in range(0, THREAD_COUNT):
+        t = _daemon_thread(run)
+        threads.append(t)
+        t.start()
+    while threads:
+        t = threads.pop()
+        t.join()
+
+    assert not dups
+    assert not active
+
+
+def test_no_concurrent_readers_writers():
+    lock = fasteners.ReaderWriterLock()
+    watch = _utils.StopWatch(duration=5)
+    watch.start()
+    dups = collections.deque()
+    active = collections.deque()
+
+    def acquire_check(me, reader):
+        if reader:
+            lock_func = lock.read_lock
+        else:
+            lock_func = lock.write_lock
+        with lock_func():
+            if not reader:
+                # There should be no-one else currently active, if there
+                # is ensure we capture them so that we can later blow-up
+                # the test.
                 if len(active) >= 1:
                     dups.append(me)
                     dups.extend(active)
-                active.append(me)
-                try:
-                    time.sleep(random.random() / 100)
-                finally:
-                    active.remove(me)
+            active.append(me)
+            try:
+                time.sleep(random.random() / 100)
+            finally:
+                active.remove(me)
 
-        def run():
-            me = threading.current_thread()
-            while not watch.expired():
-                acquire_check(me)
+    def run():
+        me = threading.current_thread()
+        while not watch.expired():
+            acquire_check(me, random.choice([True, False]))
 
-        threads = []
-        for i in range(0, self.THREAD_COUNT):
-            t = _daemon_thread(run)
-            threads.append(t)
-            t.start()
-        while threads:
-            t = threads.pop()
-            t.join()
+    threads = []
+    for i in range(0, THREAD_COUNT):
+        t = _daemon_thread(run)
+        threads.append(t)
+        t.start()
+    while threads:
+        t = threads.pop()
+        t.join()
 
-        self.assertEqual([], list(dups))
-        self.assertEqual([], list(active))
+    assert not dups
+    assert not active
 
-    def test_no_concurrent_readers_writers(self):
-        lock = fasteners.ReaderWriterLock()
-        watch = _utils.StopWatch(duration=5)
-        watch.start()
-        dups = collections.deque()
-        active = collections.deque()
 
-        def acquire_check(me, reader):
-            if reader:
-                lock_func = lock.read_lock
+def test_writer_abort():
+    lock = fasteners.ReaderWriterLock()
+    assert lock.owner is None
+
+    with pytest.raises(RuntimeError):
+        with lock.write_lock():
+            assert lock.owner == lock.WRITER
+            raise RuntimeError("Broken")
+
+    assert lock.owner is None
+
+
+def test_reader_abort():
+    lock = fasteners.ReaderWriterLock()
+    assert lock.owner is None
+
+    with pytest.raises(RuntimeError):
+        with lock.read_lock():
+            assert lock.owner == lock.READER
+            raise RuntimeError("Broken")
+
+    assert lock.owner is None
+
+
+def test_double_reader_abort():
+    lock = fasteners.ReaderWriterLock()
+    activated = collections.deque()
+
+    def double_bad_reader():
+        with lock.read_lock():
+            with lock.read_lock():
+                raise RuntimeError("Broken")
+
+    def happy_writer():
+        with lock.write_lock():
+            activated.append(lock.owner)
+
+    with futures.ThreadPoolExecutor(max_workers=20) as e:
+        for i in range(0, 20):
+            if i % 2 == 0:
+                e.submit(double_bad_reader)
             else:
-                lock_func = lock.write_lock
-            with lock_func():
-                if not reader:
-                    # There should be no-one else currently active, if there
-                    # is ensure we capture them so that we can later blow-up
-                    # the test.
-                    if len(active) >= 1:
-                        dups.append(me)
-                        dups.extend(active)
-                active.append(me)
-                try:
-                    time.sleep(random.random() / 100)
-                finally:
-                    active.remove(me)
+                e.submit(happy_writer)
 
-        def run():
-            me = threading.current_thread()
-            while not watch.expired():
-                acquire_check(me, random.choice([True, False]))
+    assert sum(a == 'w' for a in activated) == 10
 
-        threads = []
-        for i in range(0, self.THREAD_COUNT):
-            t = _daemon_thread(run)
-            threads.append(t)
-            t.start()
-        while threads:
-            t = threads.pop()
-            t.join()
 
-        self.assertEqual([], list(dups))
-        self.assertEqual([], list(active))
+def test_double_reader_writer():
+    lock = fasteners.ReaderWriterLock()
+    activated = collections.deque()
+    active = threading.Event()
 
-    def test_writer_abort(self):
-        lock = fasteners.ReaderWriterLock()
-        self.assertFalse(lock.owner)
-
-        def blow_up():
-            with lock.write_lock():
-                self.assertEqual(lock.WRITER, lock.owner)
-                raise RuntimeError("Broken")
-
-        self.assertRaises(RuntimeError, blow_up)
-        self.assertFalse(lock.owner)
-
-    def test_reader_abort(self):
-        lock = fasteners.ReaderWriterLock()
-        self.assertFalse(lock.owner)
-
-        def blow_up():
-            with lock.read_lock():
-                self.assertEqual(lock.READER, lock.owner)
-                raise RuntimeError("Broken")
-
-        self.assertRaises(RuntimeError, blow_up)
-        self.assertFalse(lock.owner)
-
-    def test_double_reader_abort(self):
-        lock = fasteners.ReaderWriterLock()
-        activated = collections.deque()
-
-        def double_bad_reader():
-            with lock.read_lock():
-                with lock.read_lock():
-                    raise RuntimeError("Broken")
-
-        def happy_writer():
-            with lock.write_lock():
-                activated.append(lock.owner)
-
-        with futures.ThreadPoolExecutor(max_workers=20) as e:
-            for i in range(0, 20):
-                if i % 2 == 0:
-                    e.submit(double_bad_reader)
-                else:
-                    e.submit(happy_writer)
-
-        self.assertEqual(10, len([a for a in activated if a == 'w']))
-
-    def test_double_reader_writer(self):
-        lock = fasteners.ReaderWriterLock()
-        activated = collections.deque()
-        active = threading.Event()
-
-        def double_reader():
-            with lock.read_lock():
-                active.set()
-                while not lock.has_pending_writers:
-                    time.sleep(0.001)
-                with lock.read_lock():
-                    activated.append(lock.owner)
-
-        def happy_writer():
-            with lock.write_lock():
-                activated.append(lock.owner)
-
-        reader = _daemon_thread(double_reader)
-        reader.start()
-        active.wait(WAIT_TIMEOUT)
-        self.assertTrue(active.is_set())
-
-        writer = _daemon_thread(happy_writer)
-        writer.start()
-
-        reader.join()
-        writer.join()
-        self.assertEqual(2, len(activated))
-        self.assertEqual(['r', 'w'], list(activated))
-
-    def test_reader_chaotic(self):
-        lock = fasteners.ReaderWriterLock()
-        activated = collections.deque()
-
-        def chaotic_reader(blow_up):
-            with lock.read_lock():
-                if blow_up:
-                    raise RuntimeError("Broken")
-                else:
-                    activated.append(lock.owner)
-
-        def happy_writer():
-            with lock.write_lock():
-                activated.append(lock.owner)
-
-        with futures.ThreadPoolExecutor(max_workers=20) as e:
-            for i in range(0, 20):
-                if i % 2 == 0:
-                    e.submit(chaotic_reader, blow_up=bool(i % 4 == 0))
-                else:
-                    e.submit(happy_writer)
-
-        writers = [a for a in activated if a == 'w']
-        readers = [a for a in activated if a == 'r']
-        self.assertEqual(10, len(writers))
-        self.assertEqual(5, len(readers))
-
-    def test_writer_chaotic(self):
-        lock = fasteners.ReaderWriterLock()
-        activated = collections.deque()
-
-        def chaotic_writer(blow_up):
-            with lock.write_lock():
-                if blow_up:
-                    raise RuntimeError("Broken")
-                else:
-                    activated.append(lock.owner)
-
-        def happy_reader():
-            with lock.read_lock():
-                activated.append(lock.owner)
-
-        with futures.ThreadPoolExecutor(max_workers=20) as e:
-            for i in range(0, 20):
-                if i % 2 == 0:
-                    e.submit(chaotic_writer, blow_up=bool(i % 4 == 0))
-                else:
-                    e.submit(happy_reader)
-
-        writers = [a for a in activated if a == 'w']
-        readers = [a for a in activated if a == 'r']
-        self.assertEqual(5, len(writers))
-        self.assertEqual(10, len(readers))
-
-    def test_writer_reader_writer(self):
-        lock = fasteners.ReaderWriterLock()
-        with lock.write_lock():
-            self.assertTrue(lock.is_writer())
-            with lock.read_lock():
-                self.assertTrue(lock.is_reader())
-                with lock.write_lock():
-                    self.assertTrue(lock.is_writer())
-
-    def test_single_reader_writer(self):
-        results = []
-        lock = fasteners.ReaderWriterLock()
+    def double_reader():
         with lock.read_lock():
-            self.assertTrue(lock.is_reader())
-            self.assertEqual(0, len(results))
+            active.set()
+            while not lock.has_pending_writers:
+                time.sleep(0.001)
+            with lock.read_lock():
+                activated.append(lock.owner)
+
+    def happy_writer():
         with lock.write_lock():
-            results.append(1)
-            self.assertTrue(lock.is_writer())
+            activated.append(lock.owner)
+
+    reader = _daemon_thread(double_reader)
+    reader.start()
+    active.wait(WAIT_TIMEOUT)
+    assert active.is_set()
+
+    writer = _daemon_thread(happy_writer)
+    writer.start()
+
+    reader.join()
+    writer.join()
+    assert list(activated) == ['r', 'w']
+
+
+def test_reader_chaotic():
+    lock = fasteners.ReaderWriterLock()
+    activated = collections.deque()
+
+    def chaotic_reader(blow_up):
         with lock.read_lock():
-            self.assertTrue(lock.is_reader())
-            self.assertEqual(1, len(results))
-        self.assertFalse(lock.is_reader())
-        self.assertFalse(lock.is_writer())
+            if blow_up:
+                raise RuntimeError("Broken")
+            else:
+                activated.append(lock.owner)
 
-    def test_reader_to_writer(self):
-        lock = fasteners.ReaderWriterLock()
+    def happy_writer():
+        with lock.write_lock():
+            activated.append(lock.owner)
 
-        def writer_func():
+    with futures.ThreadPoolExecutor(max_workers=20) as e:
+        for i in range(0, 20):
+            if i % 2 == 0:
+                e.submit(chaotic_reader, blow_up=bool(i % 4 == 0))
+            else:
+                e.submit(happy_writer)
+
+    assert sum(a == 'w' for a in activated) == 10
+    assert sum(a == 'r' for a in activated) == 5
+
+
+def test_writer_chaotic():
+    lock = fasteners.ReaderWriterLock()
+    activated = collections.deque()
+
+    def chaotic_writer(blow_up):
+        with lock.write_lock():
+            if blow_up:
+                raise RuntimeError("Broken")
+            else:
+                activated.append(lock.owner)
+
+    def happy_reader():
+        with lock.read_lock():
+            activated.append(lock.owner)
+
+    with futures.ThreadPoolExecutor(max_workers=20) as e:
+        for i in range(0, 20):
+            if i % 2 == 0:
+                e.submit(chaotic_writer, blow_up=bool(i % 4 == 0))
+            else:
+                e.submit(happy_reader)
+
+    assert sum(a == 'w' for a in activated) == 5
+    assert sum(a == 'r' for a in activated) == 10
+
+
+def test_writer_reader_writer():
+    lock = fasteners.ReaderWriterLock()
+    with lock.write_lock():
+        assert lock.is_writer()
+        with lock.read_lock():
+            assert lock.is_reader()
+            with lock.write_lock():
+                assert lock.is_writer()
+
+
+def test_single_reader_writer():
+    results = []
+    lock = fasteners.ReaderWriterLock()
+    with lock.read_lock():
+        assert lock.is_reader()
+        assert not results
+    with lock.write_lock():
+        results.append(1)
+        assert lock.is_writer()
+    with lock.read_lock():
+        assert lock.is_reader()
+        assert len(results) == 1
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
+def test_reader_to_writer():
+    lock = fasteners.ReaderWriterLock()
+
+    with lock.read_lock():
+        with pytest.raises(RuntimeError):
             with lock.write_lock():
                 pass
+        assert lock.is_reader()
+        assert not lock.is_writer()
+
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
+def test_writer_to_reader():
+    lock = fasteners.ReaderWriterLock()
+
+    with lock.write_lock():
 
         with lock.read_lock():
-            self.assertRaises(RuntimeError, writer_func)
-            self.assertFalse(lock.is_writer())
+            assert lock.is_writer()
+            assert lock.is_reader()
 
-        self.assertFalse(lock.is_reader())
-        self.assertFalse(lock.is_writer())
+        assert lock.is_writer()
+        assert not lock.is_reader()
 
-    def test_writer_to_reader(self):
-        lock = fasteners.ReaderWriterLock()
+    assert not lock.is_writer()
+    assert not lock.is_reader()
 
-        def reader_func():
-            with lock.read_lock():
-                self.assertTrue(lock.is_writer())
-                self.assertTrue(lock.is_reader())
+
+def test_double_writer():
+    lock = fasteners.ReaderWriterLock()
+
+    with lock.write_lock():
+        assert not lock.is_reader()
+        assert lock.is_writer()
 
         with lock.write_lock():
-            self.assertIsNone(reader_func())
-            self.assertFalse(lock.is_reader())
+            assert lock.is_writer()
 
-        self.assertFalse(lock.is_reader())
-        self.assertFalse(lock.is_writer())
+        assert lock.is_writer()
 
-    def test_double_writer(self):
-        lock = fasteners.ReaderWriterLock()
-        with lock.write_lock():
-            self.assertFalse(lock.is_reader())
-            self.assertTrue(lock.is_writer())
-            with lock.write_lock():
-                self.assertTrue(lock.is_writer())
-            self.assertTrue(lock.is_writer())
+    assert not lock.is_reader()
+    assert not lock.is_writer()
 
-        self.assertFalse(lock.is_reader())
-        self.assertFalse(lock.is_writer())
 
-    def test_double_reader(self):
-        lock = fasteners.ReaderWriterLock()
+def test_double_reader():
+    lock = fasteners.ReaderWriterLock()
+
+    with lock.read_lock():
+        assert lock.is_reader()
+        assert not lock.is_writer()
+
         with lock.read_lock():
-            self.assertTrue(lock.is_reader())
-            self.assertFalse(lock.is_writer())
-            with lock.read_lock():
-                self.assertTrue(lock.is_reader())
-            self.assertTrue(lock.is_reader())
+            assert lock.is_reader()
 
-        self.assertFalse(lock.is_reader())
-        self.assertFalse(lock.is_writer())
+        assert lock.is_reader()
 
-    def test_multi_reader_multi_writer(self):
-        writer_times, reader_times = _spawn_variation(10, 10)
-        self.assertEqual(10, len(writer_times))
-        self.assertEqual(10, len(reader_times))
-        for (start, stop) in writer_times:
-            self.assertEqual(0, _find_overlaps(reader_times, start, stop))
-            self.assertEqual(1, _find_overlaps(writer_times, start, stop))
-        for (start, stop) in reader_times:
-            self.assertEqual(0, _find_overlaps(writer_times, start, stop))
+    assert not lock.is_reader()
+    assert not lock.is_writer()
 
-    def test_multi_reader_single_writer(self):
-        writer_times, reader_times = _spawn_variation(9, 1)
-        self.assertEqual(1, len(writer_times))
-        self.assertEqual(9, len(reader_times))
-        start, stop = writer_times[0]
-        self.assertEqual(0, _find_overlaps(reader_times, start, stop))
 
-    def test_multi_writer(self):
-        writer_times, reader_times = _spawn_variation(0, 10)
-        self.assertEqual(10, len(writer_times))
-        self.assertEqual(0, len(reader_times))
-        for (start, stop) in writer_times:
-            self.assertEqual(1, _find_overlaps(writer_times, start, stop))
+def test_multi_reader_multi_writer():
+    writer_times, reader_times = _spawn_variation(10, 10)
+    assert len(writer_times) == 10
+    assert len(reader_times) == 10
+
+    for (start, stop) in writer_times:
+        assert _find_overlaps(reader_times, start, stop) == 0
+        assert _find_overlaps(writer_times, start, stop) == 1
+    for (start, stop) in reader_times:
+        assert _find_overlaps(writer_times, start, stop) == 0
+
+
+def test_multi_reader_single_writer():
+    writer_times, reader_times = _spawn_variation(9, 1)
+    assert len(writer_times) == 1
+    assert len(reader_times) == 9
+
+    start, stop = writer_times[0]
+    assert _find_overlaps(reader_times, start, stop) == 0
+
+
+def test_multi_writer():
+    writer_times, reader_times = _spawn_variation(0, 10)
+    assert len(writer_times) == 10
+    assert len(reader_times) == 0
+
+    for (start, stop) in writer_times:
+        assert _find_overlaps(writer_times, start, stop) == 1
