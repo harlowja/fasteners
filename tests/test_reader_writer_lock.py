@@ -22,16 +22,20 @@ def lock_file():
     lock_file_ = tempfile.NamedTemporaryFile()
     lock_file_.close()
     yield lock_file_.name
-    try:
-        os.remove(lock_file_.name)
-    except OSError:
-        pass
+    os.remove(lock_file_.name)
 
 
 @pytest.fixture()
-def disk_cache_dir():
+def dc():
     disk_cache_dir_ = tempfile.mkdtemp()
-    yield disk_cache_dir_
+    yield Cache(directory=disk_cache_dir_)
+    shutil.rmtree(disk_cache_dir_)
+
+
+@pytest.fixture()
+def deque():
+    disk_cache_dir_ = tempfile.mkdtemp()
+    yield Deque(directory=disk_cache_dir_)
     shutil.rmtree(disk_cache_dir_)
 
 
@@ -43,94 +47,69 @@ def test_lock(lock_file):
         pass
 
 
-def no_concurrent_writers(disk_cache_dir, lock_file):
-    with Cache(disk_cache_dir) as dc_:
-        for _ in range(10):
-            with ReaderWriterLock(lock_file).write_lock():
-                if dc_.get('active_count', 0) >= 1:
-                    dc_.incr('dups_count')
-                dc_.incr('active_count')
-                time.sleep(random.random() / 1000)
-                dc_.decr('active_count')
-                dc_.incr('visited_count')
+def no_concurrent_writers(lock_file, dc):
+    for _ in range(10):
+        with ReaderWriterLock(lock_file).write_lock():
+            if dc.get('active_count', 0) >= 1:
+                dc.incr('dups_count')
+            dc.incr('active_count')
+            time.sleep(random.random() / 1000)
+            dc.decr('active_count')
+            dc.incr('visited_count')
 
 
-def test_no_concurrent_writers(lock_file, disk_cache_dir):
+def test_no_concurrent_writers(lock_file, dc):
     pool = Pool(PROCESS_COUNT)
-    pool.starmap(no_concurrent_writers, [(disk_cache_dir, lock_file)] * PROCESS_COUNT,
+    pool.starmap(no_concurrent_writers, [(lock_file, dc)] * PROCESS_COUNT, chunksize=1)
+
+    assert dc.get('active_count') == 0
+    assert dc.get('dups_count') is None
+    assert dc.get('visited_count') == 10 * PROCESS_COUNT
+
+
+def no_concurrent_readers_writers(lock_file, dc):
+    for _ in range(10):
+        reader = random.choice([True, False])
+        if reader:
+            lock_func = ReaderWriterLock(lock_file).read_lock
+        else:
+            lock_func = ReaderWriterLock(lock_file).write_lock
+        with lock_func():
+            if not reader:
+                if dc.get('active_count', 0) >= 1:
+                    dc.incr('dups_count')
+            dc.incr('active_count')
+            time.sleep(random.random() / 1000)
+            dc.decr('active_count')
+            dc.incr('visited_count')
+
+
+def test_no_concurrent_readers_writers(lock_file, dc):
+    pool = Pool(PROCESS_COUNT)
+    pool.starmap(no_concurrent_readers_writers, [(lock_file, dc)] * PROCESS_COUNT,
                  chunksize=1)
 
-    with Cache(disk_cache_dir) as dc:
-        assert dc.get('active_count') == 0
-        assert dc.get('dups_count') == None
-        assert dc.get('visited_count') == 10 * PROCESS_COUNT
+    assert dc.get('active_count') == 0
+    assert dc.get('dups_count') is None
+    assert dc.get('visited_count') == 10 * PROCESS_COUNT
 
 
-def no_concurrent_readers_writers(disk_cache_dir, lock_file):
-    with Cache(disk_cache_dir) as dc_:
-        for _ in range(10):
-            reader = random.choice([True, False])
-            if reader:
-                lock_func = ReaderWriterLock(lock_file).read_lock
-            else:
-                lock_func = ReaderWriterLock(lock_file).write_lock
-            with lock_func():
-                if not reader:
-                    if dc_.get('active_count', 0) >= 1:
-                        dc_.incr('dups_count')
-                dc_.incr('active_count')
-                time.sleep(random.random() / 1000)
-                dc_.decr('active_count')
-                dc_.incr('visited_count')
-
-
-def test_no_concurrent_readers_writers(lock_file, disk_cache_dir):
-    pool = Pool(PROCESS_COUNT)
-    pool.starmap(no_concurrent_readers_writers, [(disk_cache_dir, lock_file)] * PROCESS_COUNT,
-                 chunksize=1)
-
-    with Cache(disk_cache_dir) as dc:
-        assert dc.get('active_count') == 0
-        assert dc.get('dups_count') is None
-        assert dc.get('visited_count') == 10 * PROCESS_COUNT
-
-
-def run_doesnt_hang(disk_cache_dir, lock_file, type_):
-    lock = (ReaderWriterLock(lock_file).write_lock if type_ == 'w' else
-            ReaderWriterLock(lock_file).read_lock)
-    with lock():
-        with Cache(disk_cache_dir) as dc_:
-            dc_.incr(type_)
-
-
-def run_reader_writer_chaotic(disk_cache_dir, lock_file, type_, blow_up):
-    lock = (ReaderWriterLock(lock_file).write_lock if type_ == 'w' else
-            ReaderWriterLock(lock_file).read_lock)
-    with lock():
-        with Cache(disk_cache_dir) as dc_:
-            dc_.incr(type_)
-        if blow_up:
-            raise RuntimeError()
-
-
-def reader_releases_lock_upon_crash_reader_lock(disk_cache_dir, lock_file, i):
+def reader_releases_lock_upon_crash_reader_lock(lock_file, dc, i):
     with ReaderWriterLock(lock_file).read_lock():
-        with Cache(disk_cache_dir) as dc_:
-            dc_.set('pid{}'.format(i), os.getpid())
+        dc.set('pid{}'.format(i), os.getpid())
         raise RuntimeError('')
 
 
-def reader_releases_lock_upon_crash_writer_lock(disk_cache_dir, lock_file, i):
+def reader_releases_lock_upon_crash_writer_lock(lock_file, dc, i):
     ReaderWriterLock(lock_file).acquire_write_lock(timeout=5)
-    with Cache(disk_cache_dir) as dc_:
-        dc_.set('pid{}'.format(i), os.getpid())
+    dc.set('pid{}'.format(i), os.getpid())
 
 
-def test_reader_releases_lock_upon_crash(disk_cache_dir, lock_file):
+def test_reader_releases_lock_upon_crash(lock_file, dc):
     p1 = Process(target=reader_releases_lock_upon_crash_reader_lock,
-                 args=(disk_cache_dir, lock_file, 1))
+                 args=(lock_file, dc, 1))
     p2 = Process(target=reader_releases_lock_upon_crash_writer_lock,
-                 args=(disk_cache_dir, lock_file, 2))
+                 args=(lock_file, dc, 2))
 
     p1.start()
     p1.join()
@@ -138,26 +117,23 @@ def test_reader_releases_lock_upon_crash(disk_cache_dir, lock_file):
     p2.start()
     p2.join()
 
-    with Cache(disk_cache_dir) as dc:
-        assert dc.get('pid1') != dc.get('pid2')
-
+    assert dc.get('pid1') != dc.get('pid2')
     assert p1.exitcode != 0
     assert p2.exitcode == 0
 
 
-def writer_releases_lock_upon_crash(disk_cache_dir, lock_file, i, crash):
+def writer_releases_lock_upon_crash(lock_file, dc, i, crash):
     ReaderWriterLock(lock_file).acquire_write_lock(timeout=5)
-    with Cache(disk_cache_dir) as dc_:
-        dc_.set('pid{}'.format(i), os.getpid())
+    dc.set('pid{}'.format(i), os.getpid())
     if crash:
         raise RuntimeError('')
 
 
-def test_writer_releases_lock_upon_crash(lock_file, disk_cache_dir):
+def test_writer_releases_lock_upon_crash(lock_file, dc):
     p1 = Process(target=writer_releases_lock_upon_crash,
-                 args=(disk_cache_dir, lock_file, 1, True))
+                 args=(lock_file, dc, 1, True))
     p2 = Process(target=writer_releases_lock_upon_crash,
-                 args=(disk_cache_dir, lock_file, 2, False))
+                 args=(lock_file, dc, 2, False))
 
     p1.start()
     p1.join()
@@ -165,18 +141,15 @@ def test_writer_releases_lock_upon_crash(lock_file, disk_cache_dir):
     p2.start()
     p2.join()
 
-    with Cache(disk_cache_dir) as dc:
-        assert dc.get('pid1') != dc.get('pid2')
-
+    assert dc.get('pid1') != dc.get('pid2')
     assert p1.exitcode != 0
     assert p2.exitcode == 0
 
 
-def _spawn_variation(disk_cache_dir, lock_file, readers, writers):
-    visits = Deque(directory=str(disk_cache_dir / 'w'))
+def _spawn_variation(lock_file, deque, readers, writers):
     pool = Pool(readers + writers)
-    pool.starmap(_spawling, [(lock_file, visits, type_) for type_ in ['w'] * writers + ['r'] * readers])
-    return visits
+    pool.starmap(_spawling, [(lock_file, deque, type_) for type_ in ['w'] * writers + ['r'] * readers])
+    return deque
 
 
 def _spawling(lock_file, visits, type_):
@@ -213,25 +186,19 @@ def _assert_valid(visits):
             assert v1[0] == v2[0]
 
 
-def test_multi_reader_multi_writer(lock_file, disk_cache_dir):
-    visits = _spawn_variation(Path(disk_cache_dir),
-                              Path(lock_file), 10, 10)
-
+def test_multi_reader_multi_writer(lock_file, deque):
+    visits = _spawn_variation(Path(lock_file), deque, 10, 10)
     assert len(visits) == 20 * 2
     _assert_valid(visits)
 
 
-def test_multi_reader_single_writer(lock_file, disk_cache_dir):
-    visits = _spawn_variation(Path(disk_cache_dir),
-                              Path(lock_file), 9, 1)
-
+def test_multi_reader_single_writer(lock_file, deque):
+    visits = _spawn_variation(Path(lock_file), deque, 9, 1)
     assert len(visits) == 10 * 2
     _assert_valid(visits)
 
 
-def test_multi_writer(lock_file, disk_cache_dir):
-    visits = _spawn_variation(Path(disk_cache_dir),
-                              Path(lock_file), 0, 10)
-
+def test_multi_writer(lock_file, deque):
+    visits = _spawn_variation(Path(lock_file), deque, 0, 10)
     assert len(visits) == 10 * 2
     _assert_valid(visits)
