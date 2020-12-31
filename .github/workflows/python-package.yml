@@ -34,4 +34,4 @@ jobs:
         python -m pip install -r test-requirements.txt
     - name: Test with pytest
       run: |
-        nosetests
+        pytest

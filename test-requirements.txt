@@ -1,7 +1,6 @@
 diskcache
 more_itertools
-nose
-testtools
 futures
+pytest
 sphinx
 sphinx-rtd-theme

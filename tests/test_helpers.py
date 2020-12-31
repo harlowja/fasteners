@@ -17,13 +17,11 @@
 import threading
 
 import fasteners
-from fasteners import test
 
 
-class HelpersTest(test.TestCase):
-    def test_try_lock(self):
-        lock = threading.Lock()
-        with fasteners.try_lock(lock) as locked:
-            self.assertTrue(locked)
-            with fasteners.try_lock(lock) as locked:
-                self.assertFalse(locked)
+def test_try_lock():
+    lock = threading.Lock()
+    with fasteners.try_lock(lock) as locked_1:
+        assert locked_1
+        with fasteners.try_lock(lock) as locked_2:
+            assert not locked_2
