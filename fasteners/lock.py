@@ -19,11 +19,10 @@
 
 import collections
 import contextlib
+import functools
 import threading
 
 from fasteners import _utils
-
-import six
 
 
 def read_locked(*args, **kwargs):
@@ -38,7 +37,7 @@ def read_locked(*args, **kwargs):
     def decorator(f):
         attr_name = kwargs.get('lock', '_lock')
 
-        @six.wraps(f)
+        @functools.wraps(f)
         def wrapper(self, *args, **kwargs):
             rw_lock = getattr(self, attr_name)
             with rw_lock.read_lock():
@@ -69,7 +68,7 @@ def write_locked(*args, **kwargs):
     def decorator(f):
         attr_name = kwargs.get('lock', '_lock')
 
-        @six.wraps(f)
+        @functools.wraps(f)
         def wrapper(self, *args, **kwargs):
             rw_lock = getattr(self, attr_name)
             with rw_lock.write_lock():
@@ -271,7 +270,7 @@ def locked(*args, **kwargs):
         attr_name = kwargs.get('lock', '_lock')
         logger = kwargs.get('logger')
 
-        @six.wraps(f)
+        @functools.wraps(f)
         def wrapper(self, *args, **kwargs):
             attr_value = getattr(self, attr_name)
             if isinstance(attr_value, (tuple, list)):

@@ -17,29 +17,8 @@
 #    under the License.
 
 import logging
-import sys
+import os
 import time
-
-try:
-    from os import fsencode as _fsencode
-except (ImportError, AttributeError):
-    def _fsencode(path):
-        # Replicate similar logic to what py3.2+ fsencode does.
-        # See: https://bugs.python.org/issue8514
-        encoding = sys.getfilesystemencoding()
-        if encoding == 'mbcs':
-            errors = 'strict'
-        else:
-            errors = 'surrogateescape'
-        return path.encode(encoding, errors)
-
-
-import six
-
-try:
-    from time import monotonic as now
-except (ImportError, AttributeError):
-    from monotonic import monotonic as now  # noqa
 
 # log level for low-level debugging
 BLATHER = 5
@@ -52,10 +31,10 @@ def canonicalize_path(path):
 
     Returns a binary string encoded into filesystem encoding.
     """
-    if isinstance(path, six.binary_type):
+    if isinstance(path, bytes):
         return path
-    if isinstance(path, six.text_type):
-        return _fsencode(path)
+    if isinstance(path, str):
+        return os.fsencode(path)
     else:
         return canonicalize_path(str(path))
 
@@ -153,7 +132,7 @@ class StopWatch(object):
         if self.stopped_at is not None:
             end_time = self.stopped_at
         else:
-            end_time = now()
+            end_time = time.monotonic()
         return max(0.0, end_time - self.started_at)
 
     def __enter__(self):
@@ -161,10 +140,10 @@ class StopWatch(object):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        self.stopped_at = now()
+        self.stopped_at = time.monotonic()
 
     def start(self):
-        self.started_at = now()
+        self.started_at = time.monotonic()
         self.stopped_at = None
 
     def expired(self):

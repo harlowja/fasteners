@@ -14,14 +14,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 from contextlib import contextmanager
 import errno
+import functools
 import logging
 import os
 import threading
 import time
-
-import six
 
 from fasteners import _utils
 
@@ -532,7 +532,7 @@ def interprocess_write_locked(path):
     lock = InterProcessReaderWriterLock(path)
 
     def decorator(f):
-        @six.wraps(f)
+        @functools.wraps(f)
         def wrapper(*args, **kwargs):
             with lock.write_lock():
                 return f(*args, **kwargs)
@@ -549,7 +549,7 @@ def interprocess_read_locked(path):
     lock = InterProcessReaderWriterLock(path)
 
     def decorator(f):
-        @six.wraps(f)
+        @functools.wraps(f)
         def wrapper(*args, **kwargs):
             with lock.read_lock():
                 return f(*args, **kwargs)
@@ -566,7 +566,7 @@ def interprocess_locked(path):
     lock = InterProcessLock(path)
 
     def decorator(f):
-        @six.wraps(f)
+        @functools.wraps(f)
         def wrapper(*args, **kwargs):
             with lock:
                 return f(*args, **kwargs)

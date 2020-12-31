@@ -15,17 +15,14 @@
 #    under the License.
 
 import collections
+from concurrent import futures
 import random
 import threading
 import time
 
-from concurrent import futures
-
 import fasteners
-from fasteners import test
-
 from fasteners import _utils
-
+from fasteners import test
 
 # NOTE(harlowja): Sleep a little so now() can not be the same (which will
 # cause false positives when our overlap detection code runs). If there are
@@ -54,20 +51,17 @@ def _spawn_variation(readers, writers, max_workers=None):
 
     def read_func(ident):
         with lock.read_lock():
-            # TODO(harlowja): sometime in the future use a monotonic clock here
-            # to avoid problems that can be caused by ntpd resyncing the clock
-            # while we are actively running.
-            enter_time = _utils.now()
+            enter_time = time.monotonic()
             time.sleep(WORK_TIMES[ident % len(WORK_TIMES)])
-            exit_time = _utils.now()
+            exit_time = time.monotonic()
             start_stops.append((lock.READER, enter_time, exit_time))
             time.sleep(NAPPY_TIME)
 
     def write_func(ident):
         with lock.write_lock():
-            enter_time = _utils.now()
+            enter_time = time.monotonic()
             time.sleep(WORK_TIMES[ident % len(WORK_TIMES)])
-            exit_time = _utils.now()
+            exit_time = time.monotonic()
             start_stops.append((lock.WRITER, enter_time, exit_time))
             time.sleep(NAPPY_TIME)
 
