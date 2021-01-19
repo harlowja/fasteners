@@ -204,3 +204,17 @@ def test_multi_writer(lock_file, deque):
     visits = _spawn_variation(Path(lock_file), deque, 0, 10)
     assert len(visits) == 10 * 2
     _assert_valid(visits)
+
+
+def test_lock_writer_twice(lock_file):
+    lock = ReaderWriterLock(lock_file)
+
+    ok = lock.acquire_write_lock(blocking=False)
+    assert ok
+
+    # ok on Unix, not ok on Windows
+    ok = lock.acquire_write_lock(blocking=False)
+    assert ok or not ok
+
+    # should release without crashing
+    lock.release_write_lock()

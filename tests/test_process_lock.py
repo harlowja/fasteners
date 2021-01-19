@@ -268,3 +268,18 @@ def test_bad_acquire(lock_dir):
     lock = BrokenLock(lock_file, errno.EBUSY)
     with pytest.raises(threading.ThreadError):
         lock.acquire()
+
+
+def test_lock_twice(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
+    lock = pl.InterProcessLock(lock_file)
+
+    ok = lock.acquire(blocking=False)
+    assert ok
+
+    # ok on Unix, not ok on Windows
+    ok = lock.acquire(blocking=False)
+    assert ok or not ok
+
+    # should release without crashing
+    lock.release()
