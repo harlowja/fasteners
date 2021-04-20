@@ -44,10 +44,10 @@ import fasteners
 rw_lock = fasteners.ReaderWriterLock()                                 # for threads
 rw_lock = fasteners.InterProcessReaderWriterLock('path/to/lock.file')  # for processes
 
-with rw_lock.write_locked():
+with rw_lock.write_lock():
     ... # write access
 
-with rw_lock.read_locked():
+with rw_lock.read_lock():
     ... # read access
 
 # or alternatively
