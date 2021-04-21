@@ -134,9 +134,9 @@ by the cooperation between threads or processes
 * **Upgradable readers writer lock** - a readers writer lock that can be upgraded from reader to writer (or downgraded
 from writer to reader) without losing the lock that is already held, as in:
 ```python
-with rw_lock.read_locked():
+with rw_lock.read_lock():
     ... # read access
-    with rw_lock.write_locked():
+    with rw_lock.write_lock():
         ... # write access
     ... # read access
 ```
