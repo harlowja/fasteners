@@ -49,7 +49,7 @@ setup(
     python_requires=">=3.6",
     keywords="locks thread threads interprocess"
              " processes process fasteners",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     long_description=long_description,
     long_description_content_type='text/markdown'
 )
