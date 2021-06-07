@@ -21,7 +21,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-with open("README.md", "r") as readme:
+with open("README.md", "r", encoding="utf-8") as readme:
     long_description = readme.read()
 
 install_requires = [
@@ -31,7 +31,7 @@ install_requires = [
 
 setup(
     name='fasteners',
-    version='0.16',
+    version='0.16.2',
     description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',
@@ -58,7 +58,7 @@ setup(
     ],
     keywords="locks thread threads interprocess"
              " processes process fasteners",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     long_description=long_description,
     long_description_content_type='text/markdown'
 )
