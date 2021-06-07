@@ -21,8 +21,8 @@
 from setuptools import find_packages
 from setuptools import setup
 
-with open("README.md", "r", encoding="utf-8") as readme:
-    long_description = readme.read()
+with open("README.md", "rb") as readme:
+    long_description = readme.read().decode('utf-8')
 
 install_requires = [
     'six',
