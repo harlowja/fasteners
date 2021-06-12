@@ -69,6 +69,7 @@ class _InterProcessLock(object):
     def __init__(self, path, sleep_func=time.sleep, logger=None):
         self.lockfile = None
         self.path = _utils.canonicalize_path(path)
+        self.acquired = False
         self.sleep_func = sleep_func
         self.logger = _utils.pick_first_not_none(logger, LOG)
 
@@ -140,6 +141,7 @@ class _InterProcessLock(object):
         if not gotten:
             return False
         else:
+            self.acquired = True
             self.logger.log(_utils.BLATHER,
                             "Acquired file lock `%s` after waiting %0.3fs [%s"
                             " attempts were required]", self.path,
@@ -162,6 +164,8 @@ class _InterProcessLock(object):
 
     def release(self):
         """Release the previously acquired lock."""
+        if not self.acquired:
+            raise threading.ThreadError("Unable to release an unaquired lock")
         try:
             self.unlock()
         except Exception as e:
@@ -169,6 +173,7 @@ class _InterProcessLock(object):
             self.logger.exception(msg)
             raise threading.ThreadError(msg) from e
         else:
+            self.acquired = False
             try:
                 self._do_close()
             except IOError:
