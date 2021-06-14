@@ -58,7 +58,7 @@ setup(
     ],
     keywords="locks thread threads interprocess"
              " processes process fasteners",
-    packages=find_packages(exclude=["tests"]),
+    packages=find_packages(),
     long_description=long_description,
     long_description_content_type='text/markdown'
 )

@@ -4,5 +4,3 @@ nose
 testtools
 futures
 pathlib
-sphinx
-sphinx-rtd-theme
