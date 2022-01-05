@@ -2,5 +2,3 @@ diskcache
 more_itertools
 futures
 pytest
-sphinx
-sphinx-rtd-theme
