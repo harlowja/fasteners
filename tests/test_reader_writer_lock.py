@@ -218,3 +218,18 @@ def test_lock_writer_twice(lock_file):
 
     # should release without crashing
     lock.release_write_lock()
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Only Windows is affected')
+def test_lock_file_ex_global_modification(lock_file):
+    """Some libraries modify the global LockFileEx pointer, and we have to be
+    resistant to that (as well as not modify the global pointer ourselves!)"""
+
+    from ctypes import windll
+    from ctypes.wintypes import DWORD, HANDLE
+
+    windll.kernel32.LockFileEx.argtypes = [HANDLE, DWORD]  # nonsensical signature
+
+    lock = ReaderWriterLock(lock_file)
+    lock.acquire_write_lock(blocking=False)
+    lock.release_write_lock()
