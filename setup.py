@@ -26,7 +26,7 @@ with open("README.md", "r", encoding="utf-8") as readme:
 
 setup(
     name='fasteners',
-    version='0.16.1',
+    version='0.17',
     description='A python package that provides useful locks.',
     author="Joshua Harlow",
     author_email='harlowja@yahoo-inc.com',

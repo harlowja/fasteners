@@ -1,3 +1,10 @@
+0.17:
+  - Remove support for python 3.5 and earlier, including 2.7
+  - Add support for python 3.9 and 3.10
+  - Fix a conflict with django lock
+  - Add __version__ and __all__ attributes
+  - Fix a failure to parse readme as utf-8
+  - Move from nosetest to pytest and cleanup testing infrastructure
 0.16:
   - Move from travis and appveyor to github actions
   - Add interprocess reader writer lock
