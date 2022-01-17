@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-_VERSION = "0.17"
+_VERSION = "0.17.1"
 
 
 def version_string():
