@@ -171,7 +171,7 @@ class ReaderWriterLock(object):
                         # ok to get a lock if current thread already has one
                         self._readers[me] = self._readers[me] + 1
                         break
-                    elif not self.has_pending_writers:
+                    elif (self._writer == me) or not self.has_pending_writers:
                         self._readers[me] = 1
                         break
                 # An active or pending writer; guess we have to wait.
