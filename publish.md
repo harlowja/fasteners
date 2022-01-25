@@ -1,12 +1,25 @@
-Make sure the version number is updated.
+1. Update the change log:
 
-Make sure that the working directory is clean.
+       CHANGELOG
 
-    source venv/bin/activate
-    python -m build
+2. Update the version number:
 
-Inspect the packages manually
+       setup.cfg
+       fasteners/version
 
-    twine upload dist/*
+4. Make sure that the working directory is clean.
 
-Tag the git repo.
+
+4. Build:
+
+       source venv/bin/activate
+       python -m build
+
+5. Inspect the packages manually.
+
+
+6. Upload:
+
+       twine upload dist/*
+
+7. Tag the git repo.

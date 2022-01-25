@@ -1,7 +1,13 @@
+0.17.3:
+  - Allow writer to become a reader in thread ReaderWriter lock
+
+0.17.2:
+  - Remove unnecessary setuptools pin
+
 0.17.1:
   - Switch to the modern python package build infrastructure
 
-0.17:
+0.17: [NEVER RELEASED]
   - Remove support for python 3.5 and earlier, including 2.7
   - Add support for python 3.9 and 3.10
   - Fix a conflict with django lock
