@@ -421,3 +421,38 @@ def test_multi_writer():
 
     for (start, stop) in writer_times:
         assert _find_overlaps(writer_times, start, stop) == 1
+
+
+def test_deadlock_reproducer():
+    lock = fasteners.ReaderWriterLock()
+
+    def thread1():
+        for _ in range(0, 1000):
+            print("thread1 iteration: {}".format(_))
+            print("thread1 waiting for write lock")
+            with lock.write_lock():
+                print("thread1 got write lock")
+                print("thread1 waiting for read lock")
+                with lock.read_lock():
+                    print("thread1 got read lock")
+                print("thread1 released read lock")
+            print("thread1 released write lock")
+
+    def thread2():
+        for _ in range(0, 1000):
+            print("thread2 iteration: {}".format(_))
+            print("thread2 waiting for write lock")
+            with lock.write_lock():
+                print("thread2 got write lock")
+            print("thread2 released write lock")
+
+    funcs = (thread1, thread2)
+
+    threads = []
+    for func in funcs:
+        t = _daemon_thread(func)
+        threads.append(t)
+        t.start()
+    while threads:
+        t = threads.pop()
+        t.join()
