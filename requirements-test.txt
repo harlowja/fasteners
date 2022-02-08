@@ -1,4 +1,3 @@
 diskcache
 more_itertools
-futures
 pytest
