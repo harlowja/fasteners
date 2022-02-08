@@ -203,7 +203,7 @@ class InterProcessLock:
         _interprocess_mechanism.trylock(self.lockfile)
 
     def unlock(self):
-        _interprocess_mechanism.trylock(self.lockfile)
+        _interprocess_mechanism.unlock(self.lockfile)
 
 
 class InterProcessReaderWriterLock:
