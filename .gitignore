@@ -1,4 +1,6 @@
 *.egg-info
 __pycache__
-dist
-build
+dist/
+build/
+site/
+venv/

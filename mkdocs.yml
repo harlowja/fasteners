@@ -1,0 +1,48 @@
+site_name: Fasteners
+site_url: https://fasteners.readthedocs.io/
+repo_url: https://github.com/harlowja/fasteners
+edit_uri: ''
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - guide/index.md
+      - Process locks: guide/inter_process.md
+      - Thread locks: guide/inter_thread.md
+      - Glossary: guide/glossary.md
+  - Reference:
+      - Process locks: api/inter_process.md
+      - Thread locks: api/inter_thread.md
+  - Changelog: CHANGELOG.md
+
+theme:
+  name: material
+  features:
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tracking
+  logo: img/favicon-192x192.png
+  favicon: img/favicon-32x32.png
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            show_category_heading: true
+            show_source: false
+            members_order: source
+            show_if_no_docstring: false
+            show_root_full_path: false
+            show_root_heading: true
+      watch:
+        - fasteners
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
