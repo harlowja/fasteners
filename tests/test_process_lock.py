@@ -28,6 +28,7 @@ import time
 import pytest
 
 from fasteners import process_lock as pl
+from fasteners.process_mechanism import _interprocess_mechanism
 
 WIN32 = os.name == 'nt'
 
@@ -151,9 +152,9 @@ def _lock_files(lock_path, handles_dir, num_handles=50):
         count = 0
         for handle in handles:
             try:
-                pl.InterProcessLock._trylock(handle)
+                _interprocess_mechanism.trylock(handle)
                 count += 1
-                pl.InterProcessLock._unlock(handle)
+                _interprocess_mechanism.unlock(handle)
             except IOError:
                 sys.exit(2)
             finally:
