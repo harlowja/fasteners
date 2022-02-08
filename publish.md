@@ -23,3 +23,12 @@
        twine upload dist/*
 
 7. Tag the git repo.
+
+8. Rebuild the docs
+
+      pip install -r requirements-mkdocs.txt
+      mkdocs build
+
+9. Upload docs to readthedocs:
+
+      TODO

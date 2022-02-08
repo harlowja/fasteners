@@ -287,7 +287,7 @@ class InterProcessReaderWriterLock:
                           blocking: bool = True,
                           delay: float = 0.01,
                           max_delay: float = 0.1,
-                          timeout: bool = None) -> bool:
+                          timeout: float = None) -> bool:
         """Attempt to acquire a reader's lock.
 
         Args:
@@ -311,7 +311,7 @@ class InterProcessReaderWriterLock:
                            blocking: bool = True,
                            delay: float = 0.01,
                            max_delay: float = 0.1,
-                           timeout: bool = None) -> bool:
+                           timeout: float = None) -> bool:
         """Attempt to acquire a writer's lock.
 
         Args:
