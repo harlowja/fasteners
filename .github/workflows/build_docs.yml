@@ -38,7 +38,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
-        run: python3 -m pip install -r ./requirements-mkdocs.txt
+        run: python3 -m pip install -r ./requirements-docs.txt
 
       - name: Install itself
         run: python3 -m pip install -e .
