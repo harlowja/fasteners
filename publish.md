@@ -26,7 +26,7 @@
 
 8. Rebuild the docs
 
-      pip install -r requirements-mkdocs.txt
+      pip install -r requirements-docs.txt
       mkdocs build
 
 9. Upload docs to readthedocs:

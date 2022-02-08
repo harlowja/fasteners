@@ -1,3 +1,0 @@
-mkdocs
-mkdocstrings[python] >= 0.18
-mkdocs-material
