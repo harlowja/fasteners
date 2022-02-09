@@ -2,9 +2,7 @@ name: GitHub Pages
 
 on:
   push:
-    branches:
-      - main
-      - better-docs
+    branches: [ main ]
   pull_request:
 
 jobs:
