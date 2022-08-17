@@ -98,7 +98,7 @@ features are as follows:
 
 ### Thread locks
 
-Fasteners do not provide a simple thread lock, but for the sake of comparison note that the `threading` module
+Fasteners does not provide a simple thread lock, but for the sake of comparison note that the `threading` module
 provides both a reentrant and non-reentrant locks:
 
 | lock | reentrant | mandatory |
