@@ -67,6 +67,8 @@ rw_lock.release_write_lock()
 Python standard library provides a lock for threads (both a reentrant one, and a
 non-reentrant one, see below). Fasteners extends this, and provides a lock for
 processes, as well as Reader Writer locks for both threads and processes.
+Definitions of terms used in this overview can be found in the
+[glossary](https://fasteners.readthedocs.io/en/latest/guide/glossary/).
 
 The specifics of the locks are as follows:
 
