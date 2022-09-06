@@ -22,11 +22,8 @@ import contextlib
 import functools
 import threading
 from typing import Optional
-import warnings
 
 from fasteners import _utils
-
-NOT_USED = object()
 
 
 class ReaderWriterLock(object):
@@ -37,23 +34,29 @@ class ReaderWriterLock(object):
 
     def __init__(self,
                  condition_cls=threading.Condition,
-                 current_thread_functor=NOT_USED):
+                 current_thread_functor=None):
         """
         Args:
             condition_cls:
                 Optional custom `Condition` primitive used for synchronization.
             current_thread_functor:
-                Not used, will be removed in 1.0.
+                Optional custom functor to determine the current OS or UserSpace
+                thread to enable reentrancy.
         """
-        if current_thread_functor != NOT_USED:
-            warnings.warn('current_thread_functor is deprecated (in fact not used) and will be '
-                          'removed in 1.0 release.', DeprecationWarning)
 
         self._writer = None
         self._pending_writers = collections.deque()
         self._readers = {}
         self._cond = condition_cls()
-        self._current_thread = threading.current_thread
+        # NOTE: this is required to enable client applications that use
+        # concurrency frameworks such as eventlets to pass in an alternative
+        # functor in contexts where thread.current_thread may not provide
+        # the correct behavior.
+        # see https://github.com/harlowja/fasteners/issues/96 for details.
+        self._current_thread = (
+            threading.current_thread if current_thread_functor is None
+            else current_thread_functor
+        )
 
     @property
     def has_pending_writers(self) -> bool:

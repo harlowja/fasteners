@@ -331,6 +331,30 @@ def test_single_reader_writer():
     assert not lock.is_writer()
 
 
+def test_reader_writer_current_thread_functor():
+
+    def alternitive_functor():
+        return threading.current_thread()
+
+    results = []
+    lock = fasteners.ReaderWriterLock(
+        current_thread_functor=alternitive_functor
+    )
+    assert lock._current_thread is alternitive_functor
+    assert lock._current_thread is not threading.current_thread
+    with lock.read_lock():
+        assert lock.is_reader()
+        assert not results
+    with lock.write_lock():
+        results.append(1)
+        assert lock.is_writer()
+    with lock.read_lock():
+        assert lock.is_reader()
+        assert len(results) == 1
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
 def test_reader_to_writer():
     lock = fasteners.ReaderWriterLock()
 

@@ -111,3 +111,7 @@ The `fasteners.ReaderWriterLock` at the moment is as follows:
 |------|-----------|-----------|-------------|------------|
 | fasteners.ReaderWriterLock | ✔ | ✘ | ✘ | writer |
 
+Note: if fasteners is used in combination with eventlet a `fasteners.ReaderWriterLock`
+is only reentrant if a current_thread_functor is provided that calls eventlet.getcurrent.
+If fasteners is used with similar concurrency frameworks that provide userspace threads
+aka greenthreads they should also ensure the correct functor is provided.
