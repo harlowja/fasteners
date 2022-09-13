@@ -5,7 +5,7 @@
 2. Update the version number:
 
        setup.cfg
-       fasteners/version
+       fasteners/version.py
 
 4. Make sure that the working directory is clean.
 
@@ -24,11 +24,4 @@
 
 7. Tag the git repo.
 
-8. Rebuild the docs
-
-      pip install -r requirements-docs.txt
-      mkdocs build
-
-9. Upload docs to readthedocs:
-
-      TODO
+8. Read the docs will be updated automatically.

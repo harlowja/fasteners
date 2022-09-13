@@ -3,10 +3,13 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
+
+## [0.18]
   - Reshuffle the process lock code and properly document it.
   - Revamp the docs and switch from sphinx to mkdocs
   - Remove difficult to use tread lock features from docs
-  - Bring back support for eventlets `spawn_n`
+  - Bring back support for eventlet `spawn_n`
+  - Remove support for python3.6. It should still work, but is no longer tested.
 
 ## [0.17.3]:
   - Allow writer to become a reader in thread ReaderWriter lock
