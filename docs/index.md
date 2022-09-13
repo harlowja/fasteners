@@ -15,7 +15,7 @@ pip install fasteners
 
 ## Usage
 
-See [User Guide](guide/index.md) and [Reference](reference.index.md) for usage tips and examples.
+See [User Guide](guide/index.md) for usage tips and examples and [Reference](api/inter_process.md) for detailed API.
 
 ## Similar libraries
 
