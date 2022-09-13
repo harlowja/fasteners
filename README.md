@@ -113,3 +113,6 @@ The `fasteners.ReaderWriterLock` at the moment is as follows:
 |------|-----------|-----------|-------------|------------|
 | fasteners.ReaderWriterLock | ✔ | ✘ | ✘ | writer |
 
+If your threads are created by some other means than the standard library `threading`
+module (for example `eventlet`), you may need to provide the corresponding thread
+identification and synchronisation functions to the `ReaderWriterLock`.
