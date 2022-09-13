@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   - Reshuffle the process lock code and properly document it.
   - Revamp the docs and switch from sphinx to mkdocs
   - Remove difficult to use tread lock features from docs
-  - mark unused keyword argument for deprecation in 1.0
+  - Bring back support for eventlets `spawn_n`
 
 ## [0.17.3]:
   - Allow writer to become a reader in thread ReaderWriter lock
