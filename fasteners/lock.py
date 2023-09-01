@@ -44,6 +44,7 @@ class ReaderWriterLock(object):
                 threads are not properly identified by threading.current_thread
         """
         self._writer = None
+        self._writer_entries = 0
         self._pending_writers = collections.deque()
         self._readers = {}
         self._cond = condition_cls()
@@ -99,9 +100,8 @@ class ReaderWriterLock(object):
             return self.READER
         return None
 
-    @contextlib.contextmanager
-    def read_lock(self):
-        """Context manager that grants a read lock.
+    def acquire_read_lock(self):
+        """Acquire a read lock.
 
         Will wait until no active or pending writers.
 
@@ -109,6 +109,18 @@ class ReaderWriterLock(object):
             RuntimeError: if a pending writer tries to acquire a read lock.
         """
         me = self._current_thread()
+        self._acquire_read_lock(me)
+
+    def release_read_lock(self):
+        """Release a read lock.
+
+        Raises:
+            RuntimeError: if the current thread does not own a read lock.
+        """
+        me = self._current_thread()
+        self._release_read_lock(me)
+
+    def _acquire_read_lock(self, me):
         if me in self._pending_writers:
             raise RuntimeError("Writer %s can not acquire a read lock"
                                " while waiting for the write lock"
@@ -128,23 +140,91 @@ class ReaderWriterLock(object):
                         break
                 # An active or pending writer; guess we have to wait.
                 self._cond.wait()
+
+    def _release_read_lock(self, me, raise_on_not_owned=True):
+        # I am no longer a reader, remove *one* occurrence of myself.
+        # If the current thread acquired two read locks, then it will
+        # still have to remove that other read lock; this allows for
+        # basic reentrancy to be possible.
+        with self._cond:
+            try:
+                me_instances = self._readers[me]
+                if me_instances > 1:
+                    self._readers[me] = me_instances - 1
+                else:
+                    self._readers.pop(me)
+            except KeyError:
+                if raise_on_not_owned:
+                    raise RuntimeError(f"Thread {me} does not own a read lock")
+            self._cond.notify_all()
+
+    @contextlib.contextmanager
+    def read_lock(self):
+        """Context manager that grants a read lock.
+
+        Will wait until no active or pending writers.
+
+        Raises:
+            RuntimeError: if a pending writer tries to acquire a read lock.
+        """
+        me = self._current_thread()
+        self._acquire_read_lock(me)
         try:
             yield self
         finally:
-            # I am no longer a reader, remove *one* occurrence of myself.
-            # If the current thread acquired two read locks, then it will
-            # still have to remove that other read lock; this allows for
-            # basic reentrancy to be possible.
-            with self._cond:
-                try:
-                    me_instances = self._readers[me]
-                    if me_instances > 1:
-                        self._readers[me] = me_instances - 1
-                    else:
-                        self._readers.pop(me)
-                except KeyError:
-                    pass
-                self._cond.notify_all()
+            self._release_read_lock(me, raise_on_not_owned=False)
+
+    def _acquire_write_lock(self, me):
+        if self.is_reader():
+            raise RuntimeError("Reader %s to writer privilege"
+                               " escalation not allowed" % me)
+
+        with self._cond:
+            self._pending_writers.append(me)
+            while True:
+                # No readers, and no active writer, am I next??
+                if len(self._readers) == 0 and self._writer is None:
+                    if self._pending_writers[0] == me:
+                        self._writer = self._pending_writers.popleft()
+                        self._writer_entries = 1
+                        break
+                self._cond.wait()
+
+    def _release_write_lock(self, me, raise_on_not_owned=True):
+        with self._cond:
+            self._writer = None
+            self._writer_entries = 0
+            self._cond.notify_all()
+
+    def acquire_write_lock(self):
+        """Acquire a write lock.
+
+        Will wait until no active readers. Blocks readers after acquiring.
+
+        Guaranteed for locks to be processed in fair order (FIFO).
+
+        Raises:
+            RuntimeError: if an active reader attempts to acquire a lock.
+        """
+        me = self._current_thread()
+        if self._writer == me:
+            self._writer_entries += 1
+        else:
+            self._acquire_write_lock(me)
+
+    def release_write_lock(self):
+        """Release a write lock.
+
+        Raises:
+            RuntimeError: if the current thread does not own a write lock.
+        """
+        me = self._current_thread()
+        if self._writer == me:
+            self._writer_entries -= 1
+            if self._writer_entries == 0:
+                self._release_write_lock(me)
+        else:
+            raise RuntimeError(f"Thread {me} does not own a write lock")
 
     @contextlib.contextmanager
     def write_lock(self):
@@ -158,29 +238,18 @@ class ReaderWriterLock(object):
             RuntimeError: if an active reader attempts to acquire a lock.
         """
         me = self._current_thread()
-        i_am_writer = self.is_writer(check_pending=False)
-        if self.is_reader() and not i_am_writer:
-            raise RuntimeError("Reader %s to writer privilege"
-                               " escalation not allowed" % me)
-        if i_am_writer:
-            # Already the writer; this allows for basic reentrancy.
-            yield self
-        else:
-            with self._cond:
-                self._pending_writers.append(me)
-                while True:
-                    # No readers, and no active writer, am I next??
-                    if len(self._readers) == 0 and self._writer is None:
-                        if self._pending_writers[0] == me:
-                            self._writer = self._pending_writers.popleft()
-                            break
-                    self._cond.wait()
+        if self.is_writer(check_pending=False):
+            self._writer_entries += 1
             try:
                 yield self
             finally:
-                with self._cond:
-                    self._writer = None
-                    self._cond.notify_all()
+                self._writer_entries -= 1
+        else:
+            self._acquire_write_lock(me)
+            try:
+                yield self
+            finally:
+                self._release_write_lock(me)
 
 
 def locked(*args, **kwargs):
