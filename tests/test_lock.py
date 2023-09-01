@@ -96,28 +96,40 @@ def _daemon_thread(target):
     return t
 
 
-def test_no_double_writers():
+@pytest.mark.parametrize("contextmanager", [True, False])
+def test_no_double_writers(contextmanager):
     lock = fasteners.ReaderWriterLock()
     watch = _utils.StopWatch(duration=5)
     watch.start()
     dups = collections.deque()
     active = collections.deque()
 
-    def acquire_check(me):
+    def acquire_check_ctx(me):
         with lock.write_lock():
             if len(active) >= 1:
                 dups.append(me)
                 dups.extend(active)
             active.append(me)
-            try:
-                time.sleep(random.random() / 100)
-            finally:
-                active.remove(me)
+            time.sleep(random.random() / 100)
+            active.remove(me)
+
+    def acquire_check_plain(me):
+        lock.acquire_write_lock()
+        if len(active) >= 1:
+            dups.append(me)
+            dups.extend(active)
+        active.append(me)
+        time.sleep(random.random() / 100)
+        active.remove(me)
+        lock.release_write_lock()
 
     def run():
         me = threading.current_thread()
         while not watch.expired():
-            acquire_check(me)
+            if contextmanager:
+                acquire_check_ctx(me)
+            else:
+                acquire_check_plain(me)
 
     threads = []
     for i in range(0, THREAD_COUNT):
@@ -132,14 +144,15 @@ def test_no_double_writers():
     assert not active
 
 
-def test_no_concurrent_readers_writers():
+@pytest.mark.parametrize("contextmanager", [True, False])
+def test_no_concurrent_readers_writers(contextmanager):
     lock = fasteners.ReaderWriterLock()
     watch = _utils.StopWatch(duration=5)
     watch.start()
     dups = collections.deque()
     active = collections.deque()
 
-    def acquire_check(me, reader):
+    def acquire_check_ctx(me, reader):
         if reader:
             lock_func = lock.read_lock
         else:
@@ -153,15 +166,35 @@ def test_no_concurrent_readers_writers():
                     dups.append(me)
                     dups.extend(active)
             active.append(me)
-            try:
-                time.sleep(random.random() / 100)
-            finally:
-                active.remove(me)
+            time.sleep(random.random() / 100)
+            active.remove(me)
+
+    def acquire_check_plain(me, reader):
+        if reader:
+            lock_func, unlock_func = lock.acquire_read_lock, lock.release_read_lock
+        else:
+            lock_func, unlock_func = lock.acquire_write_lock, lock.release_write_lock
+
+        lock_func()
+        if not reader:
+            # There should be no-one else currently active, if there
+            # is ensure we capture them so that we can later blow-up
+            # the test.
+            if len(active) >= 1:
+                dups.append(me)
+                dups.extend(active)
+        active.append(me)
+        time.sleep(random.random() / 100)
+        active.remove(me)
+        unlock_func()
 
     def run():
         me = threading.current_thread()
         while not watch.expired():
-            acquire_check(me, random.choice([True, False]))
+            if contextmanager:
+                acquire_check_ctx(me, random.choice([True, False]))
+            else:
+                acquire_check_plain(me, random.choice([True, False]))
 
     threads = []
     for i in range(0, THREAD_COUNT):
@@ -305,7 +338,7 @@ def test_writer_chaotic():
     assert sum(a == 'r' for a in activated) == 10
 
 
-def test_writer_reader_writer():
+def test_writer_reader_writer_ctx():
     lock = fasteners.ReaderWriterLock()
     with lock.write_lock():
         assert lock.is_writer()
@@ -315,23 +348,48 @@ def test_writer_reader_writer():
                 assert lock.is_writer()
 
 
-def test_single_reader_writer():
-    results = []
+def test_writer_reader_writer_plain():
+    lock = fasteners.ReaderWriterLock()
+    lock.acquire_write_lock()
+    assert lock.is_writer()
+    lock.acquire_read_lock()
+    assert lock.is_reader()
+    lock.acquire_write_lock()
+    assert lock.is_writer()
+
+
+def test_single_reader_writer_ctx():
     lock = fasteners.ReaderWriterLock()
     with lock.read_lock():
         assert lock.is_reader()
-        assert not results
     with lock.write_lock():
-        results.append(1)
         assert lock.is_writer()
     with lock.read_lock():
         assert lock.is_reader()
-        assert len(results) == 1
     assert not lock.is_reader()
     assert not lock.is_writer()
 
 
-def test_reader_to_writer():
+def test_single_reader_writer_plain():
+    lock = fasteners.ReaderWriterLock()
+
+    lock.acquire_read_lock()
+    assert lock.is_reader()
+    lock.release_read_lock()
+
+    lock.acquire_write_lock()
+    assert lock.is_writer()
+    lock.release_write_lock()
+
+    lock.acquire_read_lock()
+    assert lock.is_reader()
+    lock.release_read_lock()
+
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
+def test_reader_to_writer_ctx():
     lock = fasteners.ReaderWriterLock()
 
     with lock.read_lock():
@@ -345,11 +403,24 @@ def test_reader_to_writer():
     assert not lock.is_writer()
 
 
-def test_writer_to_reader():
+def test_reader_to_writer_plain():
+    lock = fasteners.ReaderWriterLock()
+
+    lock.acquire_read_lock()
+    with pytest.raises(RuntimeError):
+        lock.acquire_write_lock()
+    assert lock.is_reader()
+    assert not lock.is_writer()
+    lock.release_read_lock()
+
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
+def test_writer_to_reader_ctx():
     lock = fasteners.ReaderWriterLock()
 
     with lock.write_lock():
-
         with lock.read_lock():
             assert lock.is_writer()
             assert lock.is_reader()
@@ -361,7 +432,24 @@ def test_writer_to_reader():
     assert not lock.is_reader()
 
 
-def test_double_writer():
+def test_writer_to_reader_plain():
+    lock = fasteners.ReaderWriterLock()
+
+    lock.acquire_write_lock()
+    lock.acquire_read_lock()
+    assert lock.is_writer()
+    assert lock.is_reader()
+
+    lock.release_read_lock()
+    assert lock.is_writer()
+    assert not lock.is_reader()
+
+    lock.release_write_lock()
+    assert not lock.is_writer()
+    assert not lock.is_reader()
+
+
+def test_double_writer_ctx():
     lock = fasteners.ReaderWriterLock()
 
     with lock.write_lock():
@@ -377,7 +465,25 @@ def test_double_writer():
     assert not lock.is_writer()
 
 
-def test_double_reader():
+def test_double_writer_plain():
+    lock = fasteners.ReaderWriterLock()
+
+    lock.acquire_write_lock()
+    assert not lock.is_reader()
+    assert lock.is_writer()
+
+    lock.acquire_write_lock()
+    assert lock.is_writer()
+
+    lock.release_write_lock()
+    assert lock.is_writer()
+
+    lock.release_write_lock()
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
+def test_double_reader_ctx():
     lock = fasteners.ReaderWriterLock()
 
     with lock.read_lock():
@@ -389,6 +495,24 @@ def test_double_reader():
 
         assert lock.is_reader()
 
+    assert not lock.is_reader()
+    assert not lock.is_writer()
+
+
+def test_double_reader_plain():
+    lock = fasteners.ReaderWriterLock()
+
+    lock.acquire_read_lock()
+    assert lock.is_reader()
+    assert not lock.is_writer()
+
+    lock.acquire_read_lock()
+    assert lock.is_reader()
+
+    lock.release_read_lock()
+    assert lock.is_reader()
+
+    lock.release_read_lock()
     assert not lock.is_reader()
     assert not lock.is_writer()
 
@@ -456,3 +580,15 @@ def test_deadlock_reproducer():
     while threads:
         t = threads.pop()
         t.join()
+
+
+def test_error_when_releasing_write_lock_without_write_lock():
+    lock = fasteners.ReaderWriterLock()
+    with pytest.raises(RuntimeError):
+        lock.release_write_lock()
+
+
+def test_error_when_releasing_read_lock_without_read_lock():
+    lock = fasteners.ReaderWriterLock()
+    with pytest.raises(RuntimeError):
+        lock.release_read_lock()
