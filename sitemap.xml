@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://fasteners.readthedocs.io/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/CHANGELOG/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/api/inter_process/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/api/inter_thread/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/guide/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/guide/glossary/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/guide/inter_process/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://fasteners.readthedocs.io/guide/inter_thread/</loc>
-         <lastmod>2023-03-19</lastmod>
+         <lastmod>2023-09-01</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
