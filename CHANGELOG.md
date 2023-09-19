@@ -3,6 +3,8 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
+
+## [0.19]
   - Add `.acquire_read_lock`, `.release_read_lock`, `.acquire_write_lock`, and
     `.release_write_lock` methods to the inter thread `ReaderWriterLock` as was 
     promised in the README.
