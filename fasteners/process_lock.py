@@ -26,6 +26,7 @@ import time
 from typing import Callable
 from typing import Optional
 from typing import Union
+from s3fs import S3FileSystem
 
 from fasteners import _utils
 from fasteners.process_mechanism import _interprocess_mechanism
@@ -79,6 +80,14 @@ class InterProcessLock:
         self.acquired = False
         self.sleep_func = sleep_func
         self.logger = _utils.pick_first_not_none(logger, LOG)
+        if self.path.startswith("s3://"):
+            self._open = S3FileSystem(
+                endpoint_url=os.environ["AWS_ENDPOINT_URL"],
+                key=os.environ["AWS_ACCESS_KEY_ID"],
+                secret=os.environ["AWS_SECRET_ACCESS_KEY"]
+            ).open
+        else:
+            self._open = open
 
     def _try_acquire(self, blocking, watch):
         try:
@@ -111,7 +120,7 @@ class InterProcessLock:
         # the target file. This eliminates the possibility of an attacker
         # creating a symlink to an important file in our lock path.
         if self.lockfile is None or self.lockfile.closed:
-            self.lockfile = open(self.path, 'a')
+            self.lockfile = self._open(self.path, 'a')
 
     def acquire(self,
                 blocking: bool = True,
