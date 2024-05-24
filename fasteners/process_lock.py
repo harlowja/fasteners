@@ -81,7 +81,11 @@ class InterProcessLock:
         self.sleep_func = sleep_func
         self.logger = _utils.pick_first_not_none(logger, LOG)
         if self.path.startswith("s3://"):
-            self._open = _utils.s3_fs().open
+            self._open = S3FileSystem(
+                endpoint_url=os.environ["AWS_ENDPOINT_URL"],
+                key=os.environ["AWS_ACCESS_KEY_ID"],
+                secret=os.environ["AWS_SECRET_ACCESS_KEY"]
+            ).open
         else:
             self._open = open
 
