@@ -284,3 +284,7 @@ def test_lock_twice(lock_dir):
 
     # should release without crashing
     lock.release()
+
+
+def test_nothing():
+    assert True
