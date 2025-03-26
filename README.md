@@ -4,6 +4,7 @@ Fasteners
 [![Documentation status](https://readthedocs.org/projects/fasteners/badge/?version=latest)](https://readthedocs.org/projects/fasteners/?badge=latest)
 [![Downloads](https://img.shields.io/pypi/dm/fasteners.svg)](https://pypi.python.org/pypi/fasteners/)
 [![Latest version](https://img.shields.io/pypi/v/fasteners.svg)](https://pypi.python.org/pypi/fasteners/)
+[![libs.tech recommends](https://libs.tech/project/31970793/badge.svg)](https://libs.tech/project/31970793/fasteners)
 
 Cross-platform locks for threads and processes.
 
