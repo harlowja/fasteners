@@ -1,7 +1,6 @@
 [project]
 name = "fasteners"
 version = "0.19"
-url = "https://github.com/harlowja/fasteners"
 
 [build-system]
 requires = ["setuptools", "wheel"]
