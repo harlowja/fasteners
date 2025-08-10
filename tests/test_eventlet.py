@@ -5,6 +5,7 @@ conflicts with multiprocessing and other tests fail.
 import concurrent.futures
 from multiprocessing import get_context
 
+import pytest
 
 def _test_eventlet_spawn_n_bug():
     """Both threads run at the same time thru the lock"""
@@ -50,6 +51,7 @@ def _test_eventlet_spawn_n_bugfix():
     assert FINISHED.wait(1) == 'finished'
 
 
+@pytest.mark.skip(reason="This bug is no longer triggered in recent versions of eventlet")
 def test_eventlet_spawn_n_bug():
     with concurrent.futures.ProcessPoolExecutor(mp_context=get_context('spawn')) as executor:
         f = executor.submit(_test_eventlet_spawn_n_bug)
