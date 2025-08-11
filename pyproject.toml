@@ -26,11 +26,11 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/harlowja/fasteners"
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
     "diskcache",
     "eventlet",
-    "more_itertools", 
+    "more_itertools",
     "pytest",
 ]
 docs = [

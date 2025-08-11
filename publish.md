@@ -5,6 +5,7 @@
 2. Update the version number:
 
        pyproject.toml
+       fasteners/version.py
 
 3. Make sure that the working directory is clean.
 
