@@ -24,6 +24,7 @@ import sys
 import tempfile
 import threading
 import time
+from concurrent.futures import ProcessPoolExecutor
 
 import pytest
 
@@ -284,3 +285,18 @@ def test_lock_twice(lock_dir):
 
     # should release without crashing
     lock.release()
+
+
+def _lock_unlock(lock):
+    lock.acquire(blocking=True)
+    lock.release()
+
+
+def test_many_simultaneous_lock_requests(lock_dir):
+    lock_file = os.path.join(lock_dir, 'lock')
+    lock = pl.InterProcessLock(lock_file)
+
+    ex = ProcessPoolExecutor(max_workers=10)
+    futures = [ex.submit(_lock_unlock, lock) for _ in range(1000)]
+    for future in futures:
+        future.result()  # Ensure all futures complete without error
