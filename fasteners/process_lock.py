@@ -83,7 +83,7 @@ class InterProcessLock:
     def _try_acquire(self, blocking, watch):
         try:
             self.trylock()
-        except IOError as e:
+        except (IOError, OSError) as e:
             if e.errno in (errno.EACCES, errno.EAGAIN):
                 if not blocking or watch.expired():
                     return False
