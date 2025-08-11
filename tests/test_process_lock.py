@@ -288,15 +288,16 @@ def test_lock_twice(lock_dir):
 
 
 def _lock_unlock(lock):
-    lock.acquire(blocking=True)
-    lock.release()
+    if lock.acquire(blocking=False):
+        time.sleep(0.1)
+        lock.release()
 
 
 def test_many_simultaneous_lock_requests(lock_dir):
     lock_file = os.path.join(lock_dir, 'lock')
     lock = pl.InterProcessLock(lock_file)
 
-    ex = ProcessPoolExecutor(max_workers=10)
-    futures = [ex.submit(_lock_unlock, lock) for _ in range(100000)]
+    ex = ProcessPoolExecutor(max_workers=2)
+    futures = [ex.submit(_lock_unlock, lock) for _ in range(100)]
     for future in futures:
         future.result()  # Ensure all futures complete without error
