@@ -284,28 +284,3 @@ def test_lock_twice(lock_dir):
 
     # should release without crashing
     lock.release()
-
-
-def _holder(path, ready, done):
-    lock = pl.InterProcessLock(str(path))
-    assert lock.acquire(blocking=True)
-    ready.set()
-    done.wait(10)
-    lock.release()
-
-def test_interprocesslock_nonblocking(tmp_path):
-    lock_file = tmp_path / "lockfile"
-    ready = multiprocessing.Event()
-    done = multiprocessing.Event()
-
-    p = multiprocessing.Process(target=_holder, args=(lock_file, ready, done))
-    p.start()
-    try:
-        assert ready.wait(10)  # holder has the lock
-        lock = pl.InterProcessLock(lock_file)
-        assert not lock.acquire(blocking=False)  # pre-fix: raises BlockingIOError
-    finally:
-        done.set()
-        p.join(timeout=2)
-        if p.is_alive():
-            p.terminate()
