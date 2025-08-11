@@ -1,6 +1,6 @@
 [project]
 name = "fasteners"
-version = "0.19"
+version = "0.20"
 description = "A python package that provides useful locks"
 readme = { file = "README.md", content-type = "text/markdown; charset=UTF-8" }
 requires-python = ">=3.6"
