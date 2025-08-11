@@ -299,5 +299,6 @@ def test_repro(tmp_path):
 
     p = Process(target=_holder, args=(lock_file,))
     p.start()
+    time.sleep(0.1)
     lock = pl.InterProcessLock(lock_file)
-    lock.acquire(blocking=False)   # buggy impl raises BlockingIOError here
+    assert not lock.acquire(blocking=False)   # buggy impl raises BlockingIOError here
