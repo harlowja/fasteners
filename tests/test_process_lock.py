@@ -24,7 +24,6 @@ import sys
 import tempfile
 import threading
 import time
-from multiprocessing import Process
 
 import pytest
 
@@ -287,19 +286,26 @@ def test_lock_twice(lock_dir):
     lock.release()
 
 
-def _holder(path):
-    lock = pl.InterProcessLock(path)
-    lock.acquire(blocking=True)
-    time.sleep(1)
+def _holder(path, ready, done):
+    lock = pl.InterProcessLock(str(path))
+    assert lock.acquire(blocking=True)
+    ready.set()
+    done.wait(10)
     lock.release()
 
-
-@pytest.mark.skipif(sys.platform != "darwin", reason="Only runs on macOS")
-def test_repro(tmp_path):
+def test_interprocesslock_nonblocking(tmp_path):
     lock_file = tmp_path / "lockfile"
+    ready = multiprocessing.Event()
+    done = multiprocessing.Event()
 
-    p = Process(target=_holder, args=(lock_file,))
+    p = multiprocessing.Process(target=_holder, args=(lock_file, ready, done))
     p.start()
-    time.sleep(0.1)
-    lock = pl.InterProcessLock(lock_file)
-    assert not lock.acquire(blocking=False)   # buggy impl raises BlockingIOError here
+    try:
+        assert ready.wait(10)  # holder has the lock
+        lock = pl.InterProcessLock(lock_file)
+        assert not lock.acquire(blocking=False)  # pre-fix: raises BlockingIOError
+    finally:
+        done.set()
+        p.join(timeout=2)
+        if p.is_alive():
+            p.terminate()
