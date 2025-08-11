@@ -11,13 +11,13 @@
 
 4. Build:
 
-       uv run --extra build python -m build
+       uv run --group build python -m build
 
 5. Inspect the packages manually.
 
 6. Upload:
 
-       uv run --extra build twine upload dist/*
+       uv run --group build twine upload dist/*
 
 7. Tag the git repo.
 
