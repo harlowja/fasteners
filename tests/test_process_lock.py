@@ -294,6 +294,7 @@ def _holder(path):
     lock.release()
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="Only runs on macOS")
 def test_repro(tmp_path):
     lock_file = tmp_path / "lockfile"
 
