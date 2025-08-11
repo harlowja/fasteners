@@ -297,6 +297,6 @@ def test_many_simultaneous_lock_requests(lock_dir):
     lock = pl.InterProcessLock(lock_file)
 
     ex = ProcessPoolExecutor(max_workers=10)
-    futures = [ex.submit(_lock_unlock, lock) for _ in range(1000)]
+    futures = [ex.submit(_lock_unlock, lock) for _ in range(100000)]
     for future in futures:
         future.result()  # Ensure all futures complete without error
