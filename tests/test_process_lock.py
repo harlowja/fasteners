@@ -24,7 +24,7 @@ import sys
 import tempfile
 import threading
 import time
-from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Process
 
 import pytest
 
@@ -287,17 +287,17 @@ def test_lock_twice(lock_dir):
     lock.release()
 
 
-def _lock_unlock(lock):
-    if lock.acquire(blocking=False):
-        time.sleep(0.1)
-        lock.release()
+def _holder(path):
+    lock = pl.InterProcessLock(path)
+    lock.acquire(blocking=True)
+    time.sleep(1)
+    lock.release()
 
 
-def test_many_simultaneous_lock_requests(lock_dir):
-    lock_file = os.path.join(lock_dir, 'lock')
+def test_repro(tmp_path):
+    lock_file = tmp_path / "lockfile"
+
+    p = Process(target=_holder, args=(lock_file,))
+    p.start()
     lock = pl.InterProcessLock(lock_file)
-
-    ex = ProcessPoolExecutor(max_workers=2)
-    futures = [ex.submit(_lock_unlock, lock) for _ in range(100)]
-    for future in futures:
-        future.result()  # Ensure all futures complete without error
+    lock.acquire(blocking=False)   # buggy impl raises BlockingIOError here
