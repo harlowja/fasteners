@@ -26,6 +26,29 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/harlowja/fasteners"
 
+[dependency-groups]
+test = [
+    "diskcache",
+    "eventlet",
+    "more_itertools",
+    "pytest",
+]
+docs = [
+    "mkdocs",
+    "mkdocstrings[python] >= 0.18",
+    "mkdocs-material",
+]
+build = [
+    "build",
+    "twine",
+]
+
+[tool.uv.dependency-groups.docs]
+requires-python = ">=3.12"
+
+[tool.uv.dependency-groups.build]
+requires-python = ">=3.12"
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"

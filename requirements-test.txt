@@ -1,4 +1,0 @@
-diskcache
-eventlet
-more_itertools
-pytest
