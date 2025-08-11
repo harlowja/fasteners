@@ -5,13 +5,12 @@ description = "A python package that provides useful locks"
 readme = { file = "README.md", content-type = "text/markdown; charset=UTF-8" }
 requires-python = ">=3.6"
 keywords = ["lock", "thread", "process", "fasteners"]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "Joshua Harlow" }]
 maintainers = [{ name = "Paulius Šarka" }]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
@@ -30,9 +29,6 @@ Homepage = "https://github.com/harlowja/fasteners"
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 exclude = ["tests", "tests_eventlet"]
