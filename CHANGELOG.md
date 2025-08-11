@@ -4,6 +4,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+## [0.20]
+  - InterProcessLock now catches OSError and handles BlockingIOError correctly.
+  - Remove support for python 3.8, python 3.9 and pypy 3.9. It should still work,
+    but is no longer tested.
+  - Add support for python 3.12, 3.13 and pypy 3.11.
+
 ## [0.19]
   - Add `.acquire_read_lock`, `.release_read_lock`, `.acquire_write_lock`, and
     `.release_write_lock` methods to the inter thread `ReaderWriterLock` as was 
