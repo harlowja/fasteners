@@ -174,7 +174,7 @@ class InterProcessLock:
     def release(self):
         """Release the previously acquired lock."""
         if not self.acquired:
-            raise threading.ThreadError("Unable to release an unaquired lock")
+            raise threading.ThreadError("Unable to release an unacquired lock")
         try:
             self.unlock()
         except Exception as e:
