@@ -55,9 +55,9 @@ class LockStack(object):
     invalid if that is attempted.
     """
 
-    def __init__(self, logger=None):
+    def __init__(self, logger: logging.Logger | None = None):
         self._stack = []
-        self._logger = pick_first_not_none(logger, LOG)
+        self._logger = LOG if logger is None else logger
 
     def acquire_lock(self, lock):
         gotten = lock.acquire()
