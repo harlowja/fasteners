@@ -78,7 +78,7 @@ class InterProcessLock:
         self.path = _utils.canonicalize_path(path)
         self.acquired = False
         self.sleep_func = sleep_func
-        self.logger = _utils.pick_first_not_none(logger, LOG)
+        self.logger = LOG if logger is None else logger
 
     def _try_acquire(self, blocking, watch):
         try:
@@ -228,7 +228,7 @@ class InterProcessReaderWriterLock:
         self.lockfile = None
         self.path = _utils.canonicalize_path(path)
         self.sleep_func = sleep_func
-        self.logger = _utils.pick_first_not_none(logger, LOG)
+        self.logger = LOG if logger is None else logger
 
     @contextmanager
     def read_lock(self, delay=0.01, max_delay=0.1):
