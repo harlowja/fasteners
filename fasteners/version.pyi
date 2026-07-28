@@ -1,0 +1,3 @@
+_VERSION: str
+
+def version_string() -> str: ...
