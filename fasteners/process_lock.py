@@ -200,6 +200,12 @@ class InterProcessLock:
         return os.path.exists(self.path)
 
     def trylock(self):
+        # Internal hook; the public name is kept for backwards compatibility.
+        # Call acquire(blocking=False) for a non-blocking acquisition instead.
+        # This only attempts the OS lock on an already-open lockfile: acquire()
+        # opens the file, handles contention and updates self.acquired, while
+        # release() unlocks and closes it. Calling this hook directly bypasses
+        # that lifecycle and does not return an acquisition-success boolean.
         _interprocess_mechanism.trylock(self.lockfile)
 
     def unlock(self):
