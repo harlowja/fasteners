@@ -38,6 +38,44 @@ WORK_TIMES = [(0.01 + x / 100.0) for x in range(0, 5)]
 WAIT_TIMEOUT = 300
 
 THREAD_COUNT = 20
+INTERRUPTION_TEST_TIMEOUT = 5
+
+
+class _WaitFailureCondition(threading.Condition):
+    """Condition that raises after selected notified waits return."""
+
+    def __init__(self, exception_type):
+        super().__init__()
+        self.exception_type = exception_type
+        self.interrupt_waiter = None
+        self.allow_interrupt = threading.Event()
+        self.interrupt_raised = False
+        self.wait_started = [threading.Event() for _ in range(16)]
+        self.wait_count = 0
+
+    def wait(self, timeout=None):
+        self.wait_count += 1
+        wait_number = self.wait_count
+        if wait_number <= len(self.wait_started):
+            self.wait_started[wait_number - 1].set()
+        result = super().wait(timeout)
+        if (threading.current_thread() is self.interrupt_waiter
+                and self.allow_interrupt.is_set()
+                and not self.interrupt_raised):
+            self.interrupt_raised = True
+            raise self.exception_type("injected wait interruption")
+        return result
+
+
+def _remove_test_waiter(lock, waiter):
+    """Unstick daemon test threads if an assertion catches a broken lock."""
+    with lock._cond:
+        if lock._writer != waiter:
+            try:
+                lock._pending_writers.remove(waiter)
+            except ValueError:
+                pass
+        lock._cond.notify_all()
 
 
 def _find_overlaps(times, start, end):
@@ -219,6 +257,136 @@ def test_writer_abort():
             raise RuntimeError("Broken")
 
     assert lock.owner is None
+
+
+@pytest.mark.parametrize("exception_type", [KeyboardInterrupt, RuntimeError])
+def test_interrupted_waiting_writer_unblocks_waiting_reader(exception_type):
+    condition = _WaitFailureCondition(exception_type)
+    lock = fasteners.ReaderWriterLock(condition_cls=lambda: condition)
+    lock.acquire_read_lock()
+
+    writer_errors = []
+    writer_done = threading.Event()
+    writer_ref = {}
+
+    def interrupted_writer():
+        writer_ref["thread"] = threading.current_thread()
+        condition.interrupt_waiter = writer_ref["thread"]
+        try:
+            lock.acquire_write_lock()
+        except BaseException as exc:
+            writer_errors.append(exc)
+        else:
+            lock.release_write_lock()
+        finally:
+            writer_done.set()
+
+    writer = _daemon_thread(interrupted_writer)
+    writer.start()
+
+    reader_acquired = threading.Event()
+    release_reader = threading.Event()
+
+    def following_reader():
+        acquired = False
+        try:
+            lock.acquire_read_lock()
+            acquired = True
+            reader_acquired.set()
+            release_reader.wait(INTERRUPTION_TEST_TIMEOUT)
+        finally:
+            if acquired:
+                lock.release_read_lock()
+
+    reader = _daemon_thread(following_reader)
+    main_holds_read = True
+
+    try:
+        assert condition.wait_started[0].wait(INTERRUPTION_TEST_TIMEOUT)
+        reader.start()
+        assert condition.wait_started[1].wait(INTERRUPTION_TEST_TIMEOUT)
+        condition.allow_interrupt.set()
+        lock.release_read_lock()
+        main_holds_read = False
+
+        assert writer_done.wait(INTERRUPTION_TEST_TIMEOUT)
+        assert len(writer_errors) == 1
+        assert isinstance(writer_errors[0], exception_type)
+        assert reader_acquired.wait(INTERRUPTION_TEST_TIMEOUT)
+        with condition:
+            assert writer_ref["thread"] not in lock._pending_writers
+            assert lock._writer is None
+    finally:
+        if main_holds_read:
+            lock.release_read_lock()
+        _remove_test_waiter(lock, writer_ref.get("thread"))
+        release_reader.set()
+        writer.join(INTERRUPTION_TEST_TIMEOUT)
+        if reader.ident is not None:
+            reader.join(INTERRUPTION_TEST_TIMEOUT)
+
+    assert not writer.is_alive()
+    assert not reader.is_alive()
+
+
+def test_interrupted_writer_unblocks_remaining_writers_in_fifo_order():
+    condition = _WaitFailureCondition(KeyboardInterrupt)
+    lock = fasteners.ReaderWriterLock(condition_cls=lambda: condition)
+    lock.acquire_read_lock()
+
+    writer_errors = []
+    writer_order = []
+    writer_done = [threading.Event() for _ in range(3)]
+    writer_refs = {}
+
+    def writer(number):
+        writer_refs[number] = threading.current_thread()
+        if number == 1:
+            condition.interrupt_waiter = writer_refs[number]
+        try:
+            lock.acquire_write_lock()
+        except BaseException as exc:
+            writer_errors.append((number, exc))
+        else:
+            writer_order.append(number)
+            lock.release_write_lock()
+        finally:
+            writer_done[number - 1].set()
+
+    writers = [_daemon_thread(lambda number=number: writer(number))
+               for number in (1, 2, 3)]
+    main_holds_read = True
+
+    try:
+        for number, waiter in enumerate(writers):
+            waiter.start()
+            assert condition.wait_started[number].wait(
+                INTERRUPTION_TEST_TIMEOUT)
+
+        condition.allow_interrupt.set()
+        lock.release_read_lock()
+        main_holds_read = False
+
+        for done in writer_done:
+            assert done.wait(INTERRUPTION_TEST_TIMEOUT)
+
+        assert [(number, type(exc)) for number, exc in writer_errors] == [
+            (1, KeyboardInterrupt)]
+        assert writer_order == [2, 3]
+        with condition:
+            assert not lock._pending_writers
+            assert lock._writer is None
+    finally:
+        if main_holds_read:
+            lock.release_read_lock()
+        _remove_test_waiter(lock, writer_refs.get(1))
+        with condition:
+            condition.notify_all()
+        for waiter in writers:
+            if waiter.ident is not None:
+                waiter.join(INTERRUPTION_TEST_TIMEOUT)
+
+    assert all(not waiter.is_alive() for waiter in writers)
 
 
 def test_reader_abort():
