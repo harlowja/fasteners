@@ -188,7 +188,25 @@ class ReaderWriterLock(object):
                         self._writer = self._pending_writers.popleft()
                         self._writer_entries = 1
                         break
-                self._cond.wait()
+                try:
+                    self._cond.wait()
+                except BaseException:
+                    # An interrupted waiter must not remain at the head of
+                    # the queue and prevent every later reader or writer from
+                    # making progress. Only remove this caller's pending
+                    # entry, and preserve the original exception if cleanup
+                    # itself encounters an error.
+                    try:
+                        if self._writer != me:
+                            try:
+                                self._pending_writers.remove(me)
+                            except ValueError:
+                                pass
+                            else:
+                                self._cond.notify_all()
+                    except BaseException:
+                        pass
+                    raise
 
     def _release_write_lock(self, me, raise_on_not_owned=True):
         with self._cond:
