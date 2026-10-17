@@ -278,9 +278,37 @@ def test_lock_twice(lock_dir):
     ok = lock.acquire(blocking=False)
     assert ok
 
-    # ok on Unix, not ok on Windows
-    ok = lock.acquire(blocking=False)
-    assert ok or not ok
+    # Not reentrant: a second acquire must not succeed (see docs).
+    with pytest.raises(threading.ThreadError, match="not reentrant"):
+        lock.acquire(blocking=False)
 
     # should release without crashing
     lock.release()
+
+
+def test_interprocess_lock_not_reentrant_same_instance(lock_dir):
+    path = os.path.join(lock_dir, "reentrant1")
+    lock = pl.InterProcessLock(path)
+    assert lock.acquire()
+    try:
+        with pytest.raises(threading.ThreadError, match="not reentrant"):
+            lock.acquire()
+        with pytest.raises(threading.ThreadError, match="not reentrant"):
+            lock.acquire(blocking=False)
+    finally:
+        lock.release()
+
+
+def test_interprocess_lock_not_reentrant_sibling_instances(lock_dir):
+    path = os.path.join(lock_dir, "reentrant2")
+    a = pl.InterProcessLock(path)
+    b = pl.InterProcessLock(path)
+    assert a.acquire()
+    try:
+        assert b.acquire(blocking=False) is False
+        with pytest.raises(threading.ThreadError, match="not reentrant"):
+            b.acquire(blocking=True)
+    finally:
+        a.release()
+    assert b.acquire()
+    b.release()

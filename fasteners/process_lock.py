@@ -33,6 +33,13 @@ from fasteners.process_mechanism import _interprocess_reader_writer_mechanism
 
 LOG = logging.getLogger(__name__)
 
+# Track lock paths held by this process. POSIX flock is per-fd and reentrant
+# within a process, which lets nested or sibling InterProcessLock instances
+# on the same path succeed and then crash on release. Docs say these locks
+# are not reentrant; enforce that in-process.
+_held_lock_paths: set[str] = set()
+_held_lock_paths_guard = threading.Lock()
+
 
 def _ensure_tree(path):
     """Create a directory (and any ancestor directories required).
@@ -141,6 +148,19 @@ class InterProcessLock:
             raise ValueError("Timeout must be greater than or equal to zero")
         if delay >= max_delay:
             max_delay = delay
+        if self.acquired:
+            raise threading.ThreadError(
+                "InterProcessLock is not reentrant; already acquired on `%s`"
+                % self.path
+            )
+        with _held_lock_paths_guard:
+            if self.path in _held_lock_paths:
+                if not blocking:
+                    return False
+                raise threading.ThreadError(
+                    "InterProcessLock is not reentrant; `%s` is already held "
+                    "by this process" % self.path
+                )
         self._do_open()
         watch = _utils.StopWatch(duration=timeout)
         r = _utils.Retry(delay, max_delay,
@@ -150,6 +170,24 @@ class InterProcessLock:
         if not gotten:
             return False
         else:
+            with _held_lock_paths_guard:
+                if self.path in _held_lock_paths:
+                    # Race with another thread in this process.
+                    try:
+                        self.unlock()
+                    except Exception:
+                        pass
+                    try:
+                        self._do_close()
+                    except Exception:
+                        pass
+                    if blocking:
+                        raise threading.ThreadError(
+                            "InterProcessLock is not reentrant; `%s` is "
+                            "already held by this process" % self.path
+                        )
+                    return False
+                _held_lock_paths.add(self.path)
             self.acquired = True
             self.logger.log(_utils.BLATHER,
                             "Acquired file lock `%s` after waiting %0.3fs [%s"
@@ -183,6 +221,8 @@ class InterProcessLock:
             raise threading.ThreadError(msg) from e
         else:
             self.acquired = False
+            with _held_lock_paths_guard:
+                _held_lock_paths.discard(self.path)
             try:
                 self._do_close()
             except IOError:
